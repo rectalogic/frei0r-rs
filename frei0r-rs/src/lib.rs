@@ -3,6 +3,68 @@ pub mod ffi;
 use std::ffi::CStr;
 use std::ffi::CString;
 
+pub struct Color {
+    pub r : f32,
+    pub g : f32,
+    pub b : f32,
+}
+
+pub struct Position {
+    pub x : f64,
+    pub y : f64,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ParamType {
+    Bool,
+    Double,
+    Color,
+    Position,
+    String,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct ParamInfo {
+    pub name : &'static CStr,
+    pub param_type : ParamType,
+    pub explanation : &'static CStr,
+}
+
+pub enum Param<'a> {
+    /// Booleans
+    Bool(&'a bool),
+    /// Doubles
+    Double(&'a f64),
+    /// Color
+    Color(&'a Color),
+    /// Position
+    Position(&'a Position),
+    /// String
+    String(&'a CString),
+}
+
+pub enum ParamMut<'a> {
+    /// Booleans
+    Bool(&'a mut bool),
+    /// Doubles
+    Double(&'a mut f64),
+    /// Color
+    Color(&'a mut Color),
+    /// Position
+    Position(&'a mut Position),
+    /// String
+    String(&'a mut CString),
+}
+
+pub trait PluginBase {
+    fn param_count() -> usize;
+    fn param_info(index : usize) -> ParamInfo;
+
+    fn param(&self, param_index : usize) -> Param<'_>;
+    fn param_mut(&mut self, param_index : usize) -> ParamMut<'_>;
+}
+
+
 /// Type of the plugin
 ///
 /// These defines determine whether the plugin is a source, a filter or one of the two mixer types.
@@ -87,56 +149,13 @@ pub struct PluginInfo {
     pub major_version : i32,
     /// The minor version of the plugin
     pub minor_version : i32,
-    /// The number of parameters of the plugin
-    pub num_params : usize,
     /// An optional explanation string
     pub explanation : &'static CStr,
 }
 
-/// Parameter types
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum ParamType {
-    /// Booleans
-    Bool,
-    /// Doubles
-    Double,
-    /// Color
-    Color,
-    /// Position
-    Position,
-    /// String
-    String,
-}
-
-/// Type returned by plugin for every parameter.
-#[derive(Debug, Clone, Copy)]
-pub struct ParamInfo {
-    pub name : &'static CStr,
-    pub param_type : ParamType,
-    pub explanation : &'static CStr,
-}
-
-/// Parameters
-#[derive(Debug, Clone)]
-pub enum Param {
-    /// Booleans
-    Bool(bool),
-    /// Doubles
-    Double(f64),
-    /// Color
-    Color { r : f32, g : f32, b : f32 },
-    /// Position
-    Position { x : f64, y : f64, },
-    /// String
-    String(CString),
-}
-
-pub trait Plugin {
+pub trait Plugin: PluginBase {
     /// Called by the application to query plugin information.
     fn info() -> PluginInfo;
-
-    /// Called by the application to query the type of each parameter.
-    fn param_info(index : usize) -> ParamInfo;
 
     /// Constructor for effect instances.
     ///
@@ -145,18 +164,6 @@ pub trait Plugin {
     ///
     /// The plugin must set default values for all parameters in this function.
     fn new(width : usize, height : usize) -> Self;
-
-    /// Return a reference to parameter.
-    fn param(&self, param_index : usize) -> &Param;
-
-    /// Return a mutable reference to parameter.
-    fn param_mut(&mut self, param_index : usize) -> &mut Param;
-
-    ///// This function allows the application to set the parameter values of an effect instance.
-    //fn param(&self, param_index : usize) -> Param;
-
-    ///// This function allows the application to query the parameter values of an effect instance.
-    //fn set_param<'a>(&mut self, param_index : usize, param : Param<'a>);
 
     /// This is where the core effect processing happens. The application calls it after it has
     /// set the necessary parameter values.
