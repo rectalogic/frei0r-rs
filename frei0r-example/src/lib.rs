@@ -5,7 +5,7 @@ pub struct TestPlugin {
     yshift : f64,
 }
 
-impl PluginBase for TestPlugin {
+unsafe impl PluginBase for TestPlugin {
     fn param_count() -> usize {
         2
     }

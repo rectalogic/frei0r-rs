@@ -56,7 +56,7 @@ pub enum ParamMut<'a> {
     String(&'a mut CString),
 }
 
-pub trait PluginBase {
+pub unsafe trait PluginBase {
     fn param_count() -> usize;
     fn param_info(index : usize) -> ParamInfo;
 
