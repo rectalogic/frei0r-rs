@@ -6,6 +6,7 @@ use std::ffi::CString;
 /// Color parameter.
 ///
 /// All components are in the range [0, 1].
+#[derive(Debug, Clone, Copy)]
 pub struct Color {
     /// Red component.
     pub r : f32,
@@ -18,6 +19,7 @@ pub struct Color {
 /// Position parameter.
 ///
 /// All coordinates are in the range [0, 1].
+#[derive(Debug, Clone, Copy)]
 pub struct Position {
     pub x : f64,
     pub y : f64,
@@ -42,6 +44,7 @@ pub struct ParamInfo {
 }
 
 /// Reference to a parameter.
+#[derive(Debug, Clone, Copy)]
 pub enum Param<'a> {
     Bool(&'a bool),
     Double(&'a f64),
@@ -51,6 +54,7 @@ pub enum Param<'a> {
 }
 
 /// Mutable reference to a parameter.
+#[derive(Debug)]
 pub enum ParamMut<'a> {
     Bool(&'a mut bool),
     Double(&'a mut f64),
