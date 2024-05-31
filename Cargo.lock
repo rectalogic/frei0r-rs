@@ -83,9 +83,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "frei0r-macros"
+version = "0.1.0"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
+]
+
+[[package]]
 name = "frei0r-rs"
 version = "0.1.0"
 dependencies = [
+ "frei0r-macros",
  "frei0r-sys",
 ]
 

@@ -27,7 +27,7 @@ pub struct Position {
 
 /// Type of a parameter.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum ParamType {
+pub enum ParamKind {
     Bool,
     Double,
     Color,
@@ -39,13 +39,13 @@ pub enum ParamType {
 #[derive(Debug, Clone, Copy)]
 pub struct ParamInfo {
     pub name : &'static CStr,
-    pub param_type : ParamType,
+    pub kind : ParamKind,
     pub explanation : &'static CStr,
 }
 
 /// Reference to a parameter.
 #[derive(Debug, Clone, Copy)]
-pub enum Param<'a> {
+pub enum ParamRef<'a> {
     Bool(&'a bool),
     Double(&'a f64),
     Color(&'a Color),
@@ -72,10 +72,9 @@ pub unsafe trait PluginBase {
     fn param_count() -> usize;
     fn param_info(index : usize) -> ParamInfo;
 
-    fn param(&self, param_index : usize) -> Param<'_>;
+    fn param_ref(&self, param_index : usize) -> ParamRef<'_>;
     fn param_mut(&mut self, param_index : usize) -> ParamMut<'_>;
 }
-
 
 /// Type of the plugin.
 ///
@@ -184,6 +183,44 @@ pub trait Plugin: PluginBase {
     fn update2(&self, time : f64, width : usize, height : usize, inframe1 : &[u32], inframe2 : &[u32], inframe3 : &[u32], outframe : &mut [u32]);
 }
 
+pub use frei0r_macros::PluginBase;
+
+pub unsafe trait Param {
+    fn kind() -> ParamKind;
+    fn as_ref(&self) -> ParamRef<'_>;
+    fn as_mut(&mut self) -> ParamMut<'_>;
+}
+
+unsafe impl Param for bool {
+    fn kind() -> ParamKind { ParamKind::Bool }
+    fn as_ref(&self) -> ParamRef<'_> { ParamRef::Bool(self) }
+    fn as_mut(&mut self) -> ParamMut<'_> { ParamMut::Bool(self) }
+}
+
+unsafe impl Param for f64 {
+    fn kind() -> ParamKind { ParamKind::Double }
+    fn as_ref(&self) -> ParamRef<'_> { ParamRef::Double(self) }
+    fn as_mut(&mut self) -> ParamMut<'_> { ParamMut::Double(self) }
+}
+
+unsafe impl Param for Color {
+    fn kind() -> ParamKind { ParamKind::Color }
+    fn as_ref(&self) -> ParamRef<'_> { ParamRef::Color(self) }
+    fn as_mut(&mut self) -> ParamMut<'_> { ParamMut::Color(self) }
+}
+
+unsafe impl Param for Position {
+    fn kind() -> ParamKind { ParamKind::Position }
+    fn as_ref(&self) -> ParamRef<'_> { ParamRef::Position(self) }
+    fn as_mut(&mut self) -> ParamMut<'_> { ParamMut::Position(self) }
+}
+
+unsafe impl Param for CString {
+    fn kind() -> ParamKind { ParamKind::String }
+    fn as_ref(&self) -> ParamRef<'_> { ParamRef::String(self) }
+    fn as_mut(&mut self) -> ParamMut<'_> { ParamMut::String(self) }
+}
+
 #[macro_export]
 macro_rules! plugin {
     ($type:ty) => {
@@ -201,3 +238,4 @@ macro_rules! plugin {
         #[no_mangle] pub unsafe extern "C" fn f0r_update2(instance: ffi::f0r_instance_t, time: f64, inframe1: *const u32, inframe2: *const u32, inframe3: *const u32, outframe: *mut u32) { ffi::f0r_update2::<$type>(instance, time, inframe1, inframe2, inframe3, outframe) }
     }
 }
+

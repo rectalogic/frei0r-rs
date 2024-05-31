@@ -1,8 +1,8 @@
 use crate::Plugin;
 use crate::PluginType;
 use crate::ColorModel;
-use crate::ParamType;
-use crate::Param;
+use crate::ParamKind;
+use crate::ParamRef;
 use crate::ParamMut;
 
 pub use frei0r_sys::f0r_plugin_info_t;
@@ -51,12 +51,12 @@ pub unsafe fn f0r_get_param_info<P: Plugin>(info: *mut f0r_param_info_t, param_i
     let our_info = P::param_info(param_index);
 
     info.name = our_info.name.as_ptr();
-    info.type_ = match our_info.param_type {
-        ParamType::Bool     => F0R_PARAM_BOOL     as i32,
-        ParamType::Double   => F0R_PARAM_DOUBLE   as i32,
-        ParamType::Color    => F0R_PARAM_COLOR    as i32,
-        ParamType::Position => F0R_PARAM_POSITION as i32,
-        ParamType::String   => F0R_PARAM_STRING   as i32,
+    info.type_ = match our_info.kind {
+        ParamKind::Bool     => F0R_PARAM_BOOL     as i32,
+        ParamKind::Double   => F0R_PARAM_DOUBLE   as i32,
+        ParamKind::Color    => F0R_PARAM_COLOR    as i32,
+        ParamKind::Position => F0R_PARAM_POSITION as i32,
+        ParamKind::String   => F0R_PARAM_STRING   as i32,
     };
     info.explanation = our_info.explanation.as_ptr();
 }
@@ -86,19 +86,19 @@ pub unsafe extern "C" fn f0r_set_param_value<P: Plugin>(instance: f0r_instance_t
     let instance = unsafe { &mut *(instance as *mut Instance<P>) };
     match instance.inner.param_mut(param_index) {
         ParamMut::Bool(value) => {
-            assert!(P::param_info(param_index).param_type == ParamType::Bool);
+            assert!(P::param_info(param_index).kind == ParamKind::Bool);
 
             let param = unsafe { *(param as *const f0r_param_bool) };
             *value = param >= 0.5;
         },
         ParamMut::Double(value) => {
-            assert!(P::param_info(param_index).param_type == ParamType::Double);
+            assert!(P::param_info(param_index).kind == ParamKind::Double);
 
             let param = unsafe { *(param as *const f0r_param_double) };
             *value = param;
         },
         ParamMut::Color(value) => {
-            assert!(P::param_info(param_index).param_type == ParamType::Color);
+            assert!(P::param_info(param_index).kind == ParamKind::Color);
 
             let param = unsafe { *(param as *const f0r_param_color) };
             value.r = param.r;
@@ -106,14 +106,14 @@ pub unsafe extern "C" fn f0r_set_param_value<P: Plugin>(instance: f0r_instance_t
             value.b = param.b;
         },
         ParamMut::Position(value) => {
-            assert!(P::param_info(param_index).param_type == ParamType::Position);
+            assert!(P::param_info(param_index).kind == ParamKind::Position);
 
             let param = unsafe { *(param as *const f0r_param_position) };
             value.x = param.x;
             value.y = param.y;
         },
         ParamMut::String(value) => {
-            assert!(P::param_info(param_index).param_type == ParamType::String);
+            assert!(P::param_info(param_index).kind == ParamKind::String);
 
             let param = unsafe { *(param as *const f0r_param_string) };
             *value = unsafe { CStr::from_ptr(param) }.to_owned();
@@ -125,36 +125,36 @@ pub unsafe extern "C" fn f0r_get_param_value<P: Plugin>(instance: f0r_instance_t
     let param_index = param_index.try_into().unwrap();
 
     let instance = unsafe { &mut *(instance as *mut Instance<P>) };
-    match instance.inner.param(param_index) {
-        Param::Bool(value) => {
-            assert!(P::param_info(param_index).param_type == ParamType::Bool);
+    match instance.inner.param_ref(param_index) {
+        ParamRef::Bool(value) => {
+            assert!(P::param_info(param_index).kind == ParamKind::Bool);
 
             let param = unsafe { &mut *(param as *mut f0r_param_bool) };
             *param = if *value { 1.0 } else { 0.0 };
         },
-        Param::Double(value) => {
-            assert!(P::param_info(param_index).param_type == ParamType::Double);
+        ParamRef::Double(value) => {
+            assert!(P::param_info(param_index).kind == ParamKind::Double);
 
             let param = unsafe { &mut *(param as *mut f0r_param_double) };
             *param = *value;
         },
-        Param::Color(value) => {
-            assert!(P::param_info(param_index).param_type == ParamType::Color);
+        ParamRef::Color(value) => {
+            assert!(P::param_info(param_index).kind == ParamKind::Color);
 
             let param = unsafe { &mut *(param as *mut f0r_param_color) };
             param.r = value.r;
             param.g = value.g;
             param.b = value.b;
         },
-        Param::Position(value) => {
-            assert!(P::param_info(param_index).param_type == ParamType::Position);
+        ParamRef::Position(value) => {
+            assert!(P::param_info(param_index).kind == ParamKind::Position);
 
             let param = unsafe { &mut *(param as *mut f0r_param_position) };
             param.x = value.x;
             param.y = value.y;
         },
-        Param::String(value) => {
-            assert!(P::param_info(param_index).param_type == ParamType::String);
+        ParamRef::String(value) => {
+            assert!(P::param_info(param_index).kind == ParamKind::String);
 
             let param = unsafe { &mut *(param as *mut f0r_param_string) };
             *param = value.as_ptr() as f0r_param_string; // We are casting away constness here.

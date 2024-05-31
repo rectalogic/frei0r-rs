@@ -1,3 +1,3 @@
 [workspace]
 resolver = "2"
-members = ["frei0r-rs", "frei0r-sys", "frei0r-example"]
+members = ["frei0r-rs", "frei0r-sys", "frei0r-example", "frei0r-macros"]

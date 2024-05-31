@@ -1,38 +1,9 @@
 use frei0r_rs::*;
 
+#[derive(PluginBase)]
 pub struct TestPlugin {
-    xshift : f64,
-    yshift : f64,
-}
-
-unsafe impl PluginBase for TestPlugin {
-    fn param_count() -> usize {
-        2
-    }
-
-    fn param_info(param_index : usize) -> ParamInfo {
-        match param_index {
-            0 => ParamInfo { name : c"xshift", param_type : ParamType::Double, explanation : c"shift in x direction" },
-            1 => ParamInfo { name : c"yshift", param_type : ParamType::Double, explanation : c"shift in y direction" },
-            _ => unreachable!(),
-        }
-    }
-
-    fn param(&self, param_index : usize) -> Param<'_> {
-        match param_index {
-            0 => Param::Double(&self.xshift),
-            1 => Param::Double(&self.yshift),
-            _ => unreachable!(),
-        }
-    }
-
-    fn param_mut(&mut self, param_index : usize) -> ParamMut<'_> {
-        match param_index {
-            0 => ParamMut::Double(&mut self.xshift),
-            1 => ParamMut::Double(&mut self.yshift),
-            _ => unreachable!(),
-        }
-    }
+    #[frei0r(explain = c"Shift in x direction")] xshift : f64,
+    #[frei0r(explain = c"Shift in y direction")] yshift : f64,
 }
 
 impl Plugin for TestPlugin {
