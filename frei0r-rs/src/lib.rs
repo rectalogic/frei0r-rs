@@ -3,17 +3,27 @@ pub mod ffi;
 use std::ffi::CStr;
 use std::ffi::CString;
 
+/// Color parameter.
+///
+/// All components are in the range [0, 1].
 pub struct Color {
+    /// Red component.
     pub r : f32,
+    /// Green component.
     pub g : f32,
+    /// Blue component.
     pub b : f32,
 }
 
+/// Position parameter.
+///
+/// All coordinates are in the range [0, 1].
 pub struct Position {
     pub x : f64,
     pub y : f64,
 }
 
+/// Type of a parameter.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ParamType {
     Bool,
@@ -23,6 +33,7 @@ pub enum ParamType {
     String,
 }
 
+/// Information of a parameter.
 #[derive(Debug, Clone, Copy)]
 pub struct ParamInfo {
     pub name : &'static CStr,
@@ -30,32 +41,29 @@ pub struct ParamInfo {
     pub explanation : &'static CStr,
 }
 
+/// Reference to a parameter.
 pub enum Param<'a> {
-    /// Booleans
     Bool(&'a bool),
-    /// Doubles
     Double(&'a f64),
-    /// Color
     Color(&'a Color),
-    /// Position
     Position(&'a Position),
-    /// String
     String(&'a CString),
 }
 
+/// Mutable reference to a parameter.
 pub enum ParamMut<'a> {
-    /// Booleans
     Bool(&'a mut bool),
-    /// Doubles
     Double(&'a mut f64),
-    /// Color
     Color(&'a mut Color),
-    /// Position
     Position(&'a mut Position),
-    /// String
     String(&'a mut CString),
 }
 
+/// Base trait of [Plugin] which is responsible for setting/getting of plugin parameters.
+///
+/// This is unsafe because you have verify that the parameter type returned by
+/// [PluginBase::param_info], [PluginBase::param] and [PluginBase::param_mut] agrees with each
+/// other.
 pub unsafe trait PluginBase {
     fn param_count() -> usize;
     fn param_info(index : usize) -> ParamInfo;
@@ -65,7 +73,7 @@ pub unsafe trait PluginBase {
 }
 
 
-/// Type of the plugin
+/// Type of the plugin.
 ///
 /// These defines determine whether the plugin is a source, a filter or one of the two mixer types.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -126,15 +134,8 @@ pub enum ColorModel {
     PACKED32,
 }
 
-/// PluginInfo is returned by the plugin to tell the application about its name, type, number of
+/// The type returned by the plugin to tell the application about its name, type, number of
 /// parameters, and version.
-///
-/// An application should ignore (i.e. not use) frei0r effects that have unknown values in the
-/// plugin_type or color_model field. It should also ignore effects with a too high frei0r_version.
-///
-/// This is necessary to be able to extend the frei0r spec (e.g. by adding new color models or
-/// plugin types) in a way that does not result in crashes when loading effects that make use of
-/// these extensions into an older application.
 #[derive(Debug, Clone, Copy)]
 pub struct PluginInfo {
     /// The (short) name of the plugin
@@ -153,6 +154,7 @@ pub struct PluginInfo {
     pub explanation : &'static CStr,
 }
 
+/// The plugin type.
 pub trait Plugin: PluginBase {
     /// Called by the application to query plugin information.
     fn info() -> PluginInfo;
@@ -167,9 +169,6 @@ pub trait Plugin: PluginBase {
 
     /// This is where the core effect processing happens. The application calls it after it has
     /// set the necessary parameter values.
-    ///
-    /// This function should not alter the parameters of the effect in any way ([Instance::param]
-    /// should return the same values after a call to [Instance::update] as before the call).
     ///
     /// The function is responsible to restore the fpu state (e.g. rounding mode) and mmx state if
     /// applicable before it returns to the caller.
