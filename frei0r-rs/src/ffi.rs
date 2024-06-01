@@ -17,9 +17,13 @@ pub use std::ffi::c_void;
 use frei0r_sys::*;
 use std::ffi::CStr;
 
+#[doc(hidden)]
 pub unsafe extern "C" fn f0r_init() -> c_int { 1 }
+
+#[doc(hidden)]
 pub unsafe extern "C" fn f0r_deinit() {}
 
+#[doc(hidden)]
 pub unsafe extern "C" fn f0r_get_plugin_info<P: Plugin>(info: *mut f0r_plugin_info_t) {
     let info = unsafe { &mut *info };
     let our_info = P::info();
@@ -44,6 +48,7 @@ pub unsafe extern "C" fn f0r_get_plugin_info<P: Plugin>(info: *mut f0r_plugin_in
     info.explanation = our_info.explanation.as_ptr();
 }
 
+#[doc(hidden)]
 pub unsafe fn f0r_get_param_info<P: Plugin>(info: *mut f0r_param_info_t, param_index: c_int) {
     let param_index = param_index.try_into().unwrap();
 
@@ -67,6 +72,7 @@ pub struct Instance<P: Plugin> {
     inner : P,
 }
 
+#[doc(hidden)]
 pub unsafe extern "C" fn f0r_construct<P: Plugin>(width : c_uint, height: c_uint) -> f0r_instance_t {
     let width = width.try_into().unwrap();
     let height = height.try_into().unwrap();
@@ -75,11 +81,13 @@ pub unsafe extern "C" fn f0r_construct<P: Plugin>(width : c_uint, height: c_uint
     Box::into_raw(Box::new(instance)) as f0r_instance_t
 }
 
+#[doc(hidden)]
 pub unsafe extern "C" fn f0r_destruct<P: Plugin>(instance: f0r_instance_t) {
     let instance = unsafe { Box::from_raw(instance as *mut Instance<P>) };
     drop(instance)
 }
 
+#[doc(hidden)]
 pub unsafe extern "C" fn f0r_set_param_value<P: Plugin>(instance: f0r_instance_t, param: f0r_param_t, param_index: c_int) {
     let param_index = param_index.try_into().unwrap();
 
@@ -121,6 +129,7 @@ pub unsafe extern "C" fn f0r_set_param_value<P: Plugin>(instance: f0r_instance_t
     };
 }
 
+#[doc(hidden)]
 pub unsafe extern "C" fn f0r_get_param_value<P: Plugin>(instance: f0r_instance_t, param: f0r_param_t, param_index: c_int) {
     let param_index = param_index.try_into().unwrap();
 
@@ -168,6 +177,7 @@ pub unsafe extern "C" fn f0r_get_param_value<P: Plugin>(instance: f0r_instance_t
     };
 }
 
+#[doc(hidden)]
 pub unsafe extern "C" fn f0r_update<P: Plugin>(instance: f0r_instance_t, time: f64, inframe: *const u32, outframe: *mut u32) {
     let instance = &mut *(instance as *mut Instance<P>);
     let inframe = std::slice::from_raw_parts(inframe, instance.width * instance.height);
@@ -175,6 +185,7 @@ pub unsafe extern "C" fn f0r_update<P: Plugin>(instance: f0r_instance_t, time: f
     instance.inner.update(time, instance.width, instance.height, inframe, outframe);
 }
 
+#[doc(hidden)]
 pub unsafe extern "C" fn f0r_update2<P: Plugin>(instance: f0r_instance_t, time: f64, inframe1: *const u32, inframe2: *const u32, inframe3: *const u32, outframe: *mut u32) {
     let instance = &mut *(instance as *mut Instance<P>);
     let inframe1 = std::slice::from_raw_parts(inframe1, instance.width * instance.height);

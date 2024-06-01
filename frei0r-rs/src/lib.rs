@@ -1,3 +1,10 @@
+#![allow(clippy::too_many_arguments)]
+
+//! Rust binding for the implementation of fri0r plugin API <https://frei0r.dyne.org/>.
+//!
+//! An example can be found in the frei0r_example crate located in the same cargo workspace.
+
+#[doc(hidden)]
 pub mod ffi;
 
 use std::ffi::CStr;
@@ -65,9 +72,12 @@ pub enum ParamMut<'a> {
 
 /// Base trait of [Plugin] which is responsible for setting/getting of plugin parameters.
 ///
-/// This is unsafe because you have verify that the parameter type returned by
-/// [PluginBase::param_info], [PluginBase::param] and [PluginBase::param_mut] agrees with each
-/// other.
+/// **AVOID** implementing it directly. Use the derive macro [PluginBase](frei0r_macros::PluginBase) instead.
+///
+/// # Safety
+///
+/// Implementers must verify that the parameter type returned by [PluginBase::param_info],
+/// [PluginBase::param_ref] and [PluginBase::param_mut] agrees with each other.
 pub unsafe trait PluginBase {
     fn param_count() -> usize;
     fn param_info(index : usize) -> ParamInfo;
@@ -185,6 +195,12 @@ pub trait Plugin: PluginBase {
 
 pub use frei0r_macros::PluginBase;
 
+/// Helper trait used in the implmenetation of derive macro [PluginBase](frei0r_macros::PluginBase). **DO NOT** use directly.
+///
+/// # Safety
+///
+/// Implementers must verify that the parameter type returned by [Param::kind], [Param::as_ref] and
+/// [Param::as_mut] agrees with each other.
 pub unsafe trait Param {
     fn kind() -> ParamKind;
     fn as_ref(&self) -> ParamRef<'_>;
@@ -221,6 +237,7 @@ unsafe impl Param for CString {
     fn as_mut(&mut self) -> ParamMut<'_> { ParamMut::String(self) }
 }
 
+/// Export necessary C bindings for frei0r plugin.
 #[macro_export]
 macro_rules! plugin {
     ($type:ty) => {
