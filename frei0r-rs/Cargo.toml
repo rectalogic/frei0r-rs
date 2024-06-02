@@ -3,6 +3,10 @@ name = "frei0r-rs"
 version = "0.1.0"
 edition = "2021"
 
+[[example]]
+name = "shift"
+crate-type = ["cdylib"]
+
 [dependencies]
 frei0r-macros = { version = "0.1.0", path = "../frei0r-macros" }
 frei0r-sys = { version = "0.1.0", path = "../frei0r-sys" }

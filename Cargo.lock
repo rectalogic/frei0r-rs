@@ -107,13 +107,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "frei0r-test"
-version = "0.1.0"
-dependencies = [
- "frei0r-rs",
-]
-
-[[package]]
 name = "glob"
 version = "0.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
