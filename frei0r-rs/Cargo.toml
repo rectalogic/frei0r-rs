@@ -2,6 +2,8 @@
 name = "frei0r-rs"
 version = "0.1.0"
 edition = "2021"
+license = "MIT"
+repository = "https://gitlab.com/kwokkinming/frei0r-rs"
 
 [[example]]
 name = "shift"
