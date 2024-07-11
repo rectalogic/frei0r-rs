@@ -87,7 +87,7 @@ impl DeriveInputInfo {
 }
 
 /// Derive macro used in the implementation of [PluginBase](../frei0r_rs/trait.PluginBase.html) trait.
-#[proc_macro_derive(PluginBase, attributes(rename, frei0r))]
+#[proc_macro_derive(PluginBase, attributes(frei0r))]
 pub fn derive_plugin_base(input : TokenStream) -> TokenStream {
     DeriveInputInfo::new(parse_macro_input!(input as DeriveInput))
         .map(|info| {
