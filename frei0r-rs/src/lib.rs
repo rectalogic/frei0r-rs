@@ -2,7 +2,7 @@
 
 //! Rust binding for the implementation of fri0r plugin API <https://frei0r.dyne.org/>.
 //!
-//! An example can be found in the frei0r_example crate located in the same cargo workspace.
+//! See example for API usage.
 
 #[doc(hidden)]
 pub mod ffi;
