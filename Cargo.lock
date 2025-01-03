@@ -84,7 +84,7 @@ dependencies = [
 
 [[package]]
 name = "frei0r-macros"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -93,7 +93,7 @@ dependencies = [
 
 [[package]]
 name = "frei0r-rs"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "frei0r-macros",
  "frei0r-sys",
@@ -101,7 +101,7 @@ dependencies = [
 
 [[package]]
 name = "frei0r-sys"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "bindgen",
 ]
