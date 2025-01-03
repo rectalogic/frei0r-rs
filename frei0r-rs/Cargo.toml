@@ -3,7 +3,7 @@ name = "frei0r-rs"
 version = "0.1.0"
 edition = "2021"
 license = "MIT"
-repository = "https://gitlab.com/kwokkinming/frei0r-rs"
+repository = "https://github.com/kenkinming2002/frei0r-rs"
 description = "Rust bindings to the frei0r plugin API"
 
 [[example]]
