@@ -19,11 +19,14 @@ struct FieldInfo {
 }
 
 impl FieldInfo {
-    fn new(field : Field) -> Result<Self> {
+    fn new(field : Field) -> Result<Option<Self>> {
         let mut rename = None;
         let mut explain = None;
         for attr in field.attrs {
-            if attr.path().is_ident("frei0r") {
+            if attr.path().is_ident("internal") {
+                return Ok(None);
+            }
+            else if attr.path().is_ident("frei0r") {
                 let name_values: Punctuated<MetaNameValue, Token![,]> = attr.parse_args_with(Punctuated::parse_terminated)?;
                 for name_value in name_values {
                     let ident = name_value.path.require_ident()?;
@@ -45,12 +48,12 @@ impl FieldInfo {
                 }
             }
         }
-        Ok(Self {
+        Ok(Some(Self {
             ident : field.ident.unwrap(),
             ty : field.ty,
             rename,
             explain,
-        })
+        }))
     }
 
     fn param_name(&self) -> Expr {
@@ -79,7 +82,7 @@ impl DeriveInputInfo {
             DeriveInput { ident, generics, data : Data::Struct(DataStruct { fields : Fields::Named(fields), .. }), .. } => Ok(Self {
                 ident,
                 generics,
-                fields : fields.named.into_iter().map(FieldInfo::new).try_collect()?
+                fields : fields.named.into_iter().flat_map(|f| FieldInfo::new(f).transpose()).try_collect()?,
             }),
             _ => Err(Error::new_spanned(derive_input,  "Derive macro PluginBase is only supported on struct with named fields."))
         }
@@ -87,7 +90,7 @@ impl DeriveInputInfo {
 }
 
 /// Derive macro used in the implementation of [PluginBase](../frei0r_rs/trait.PluginBase.html) trait.
-#[proc_macro_derive(PluginBase, attributes(frei0r))]
+#[proc_macro_derive(PluginBase, attributes(frei0r, internal))]
 pub fn derive_plugin_base(input : TokenStream) -> TokenStream {
     DeriveInputInfo::new(parse_macro_input!(input as DeriveInput))
         .map(|info| {
