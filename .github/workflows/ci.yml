@@ -4,8 +4,6 @@ on: push
 
 env:
   CARGO_TERM_COLOR: always
-  # workaround bindgen issue https://github.com/KyleMayes/clang-sys/issues/181#issuecomment-2140506444
-  BINDGEN_EXTRA_CLANG_ARGS_aarch64-apple-darwin: "-I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include"
 
 jobs:
   ci:
