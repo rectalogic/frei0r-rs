@@ -6,6 +6,8 @@ fn main() {
     bindgen::Builder::default()
         .header("frei0r.h")
         .parse_callbacks(Box::new(bindgen::CargoCallbacks::new()))
-        .generate().expect("Unable to generate bindings")
-        .write_to_file(out_path.join("bindings.rs")).expect("Couldn't write bindings!");
+        .generate()
+        .expect("Unable to generate bindings")
+        .write_to_file(out_path.join("bindings.rs"))
+        .expect("Couldn't write bindings!");
 }

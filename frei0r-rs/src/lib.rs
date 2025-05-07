@@ -16,11 +16,11 @@ use std::ffi::CString;
 #[derive(Debug, Clone, Copy)]
 pub struct Color {
     /// Red component.
-    pub r : f32,
+    pub r: f32,
     /// Green component.
-    pub g : f32,
+    pub g: f32,
     /// Blue component.
-    pub b : f32,
+    pub b: f32,
 }
 
 /// Position parameter.
@@ -28,8 +28,8 @@ pub struct Color {
 /// All coordinates are in the range [0, 1].
 #[derive(Debug, Clone, Copy)]
 pub struct Position {
-    pub x : f64,
-    pub y : f64,
+    pub x: f64,
+    pub y: f64,
 }
 
 /// Type of a parameter.
@@ -45,9 +45,9 @@ pub enum ParamKind {
 /// Information of a parameter.
 #[derive(Debug, Clone, Copy)]
 pub struct ParamInfo {
-    pub name : &'static CStr,
-    pub kind : ParamKind,
-    pub explanation : &'static CStr,
+    pub name: &'static CStr,
+    pub kind: ParamKind,
+    pub explanation: &'static CStr,
 }
 
 /// Reference to a parameter.
@@ -80,10 +80,10 @@ pub enum ParamMut<'a> {
 /// [PluginBase::param_ref] and [PluginBase::param_mut] agrees with each other.
 pub unsafe trait PluginBase {
     fn param_count() -> usize;
-    fn param_info(index : usize) -> ParamInfo;
+    fn param_info(index: usize) -> ParamInfo;
 
-    fn param_ref(&self, param_index : usize) -> ParamRef<'_>;
-    fn param_mut(&mut self, param_index : usize) -> ParamMut<'_>;
+    fn param_ref(&self, param_index: usize) -> ParamRef<'_>;
+    fn param_mut(&mut self, param_index: usize) -> ParamMut<'_>;
 }
 
 /// Type of the plugin.
@@ -152,19 +152,19 @@ pub enum ColorModel {
 #[derive(Debug, Clone, Copy)]
 pub struct PluginInfo {
     /// The (short) name of the plugin
-    pub name : &'static CStr,
+    pub name: &'static CStr,
     /// The plugin author
-    pub author : &'static CStr,
+    pub author: &'static CStr,
     /// The plugin type
-    pub plugin_type : PluginType,
+    pub plugin_type: PluginType,
     /// The color model used
-    pub color_model : ColorModel,
+    pub color_model: ColorModel,
     /// The major version of the plugin
-    pub major_version : i32,
+    pub major_version: i32,
     /// The minor version of the plugin
-    pub minor_version : i32,
+    pub minor_version: i32,
     /// An optional explanation string
-    pub explanation : &'static CStr,
+    pub explanation: &'static CStr,
 }
 
 /// The plugin type.
@@ -178,7 +178,7 @@ pub trait Plugin: PluginBase {
     /// in both dimensions.
     ///
     /// The plugin must set default values for all parameters in this function.
-    fn new(width : usize, height : usize) -> Self;
+    fn new(width: usize, height: usize) -> Self;
 
     /// This is where the core effect processing happens. The application calls it after it has
     /// set the necessary parameter values.
@@ -187,10 +187,19 @@ pub trait Plugin: PluginBase {
     /// applicable before it returns to the caller.
     ///
     /// This is never called for effect of type [PluginType::Mixer2] and [PluginType::Mixer3].
-    fn update(&self, time : f64, width : usize, height : usize, inframe : &[u32], outframe : &mut [u32]);
+    fn update(&self, time: f64, width: usize, height: usize, inframe: &[u32], outframe: &mut [u32]);
 
     /// For effect of type [PluginType::Mixer2] and [PluginType::Mixer3].
-    fn update2(&self, time : f64, width : usize, height : usize, inframe1 : &[u32], inframe2 : &[u32], inframe3 : &[u32], outframe : &mut [u32]);
+    fn update2(
+        &self,
+        time: f64,
+        width: usize,
+        height: usize,
+        inframe1: &[u32],
+        inframe2: &[u32],
+        inframe3: &[u32],
+        outframe: &mut [u32],
+    );
 }
 
 pub use frei0r_macros::PluginBase;
@@ -208,33 +217,63 @@ pub unsafe trait Param {
 }
 
 unsafe impl Param for bool {
-    fn kind() -> ParamKind { ParamKind::Bool }
-    fn as_ref(&self) -> ParamRef<'_> { ParamRef::Bool(self) }
-    fn as_mut(&mut self) -> ParamMut<'_> { ParamMut::Bool(self) }
+    fn kind() -> ParamKind {
+        ParamKind::Bool
+    }
+    fn as_ref(&self) -> ParamRef<'_> {
+        ParamRef::Bool(self)
+    }
+    fn as_mut(&mut self) -> ParamMut<'_> {
+        ParamMut::Bool(self)
+    }
 }
 
 unsafe impl Param for f64 {
-    fn kind() -> ParamKind { ParamKind::Double }
-    fn as_ref(&self) -> ParamRef<'_> { ParamRef::Double(self) }
-    fn as_mut(&mut self) -> ParamMut<'_> { ParamMut::Double(self) }
+    fn kind() -> ParamKind {
+        ParamKind::Double
+    }
+    fn as_ref(&self) -> ParamRef<'_> {
+        ParamRef::Double(self)
+    }
+    fn as_mut(&mut self) -> ParamMut<'_> {
+        ParamMut::Double(self)
+    }
 }
 
 unsafe impl Param for Color {
-    fn kind() -> ParamKind { ParamKind::Color }
-    fn as_ref(&self) -> ParamRef<'_> { ParamRef::Color(self) }
-    fn as_mut(&mut self) -> ParamMut<'_> { ParamMut::Color(self) }
+    fn kind() -> ParamKind {
+        ParamKind::Color
+    }
+    fn as_ref(&self) -> ParamRef<'_> {
+        ParamRef::Color(self)
+    }
+    fn as_mut(&mut self) -> ParamMut<'_> {
+        ParamMut::Color(self)
+    }
 }
 
 unsafe impl Param for Position {
-    fn kind() -> ParamKind { ParamKind::Position }
-    fn as_ref(&self) -> ParamRef<'_> { ParamRef::Position(self) }
-    fn as_mut(&mut self) -> ParamMut<'_> { ParamMut::Position(self) }
+    fn kind() -> ParamKind {
+        ParamKind::Position
+    }
+    fn as_ref(&self) -> ParamRef<'_> {
+        ParamRef::Position(self)
+    }
+    fn as_mut(&mut self) -> ParamMut<'_> {
+        ParamMut::Position(self)
+    }
 }
 
 unsafe impl Param for CString {
-    fn kind() -> ParamKind { ParamKind::String }
-    fn as_ref(&self) -> ParamRef<'_> { ParamRef::String(self) }
-    fn as_mut(&mut self) -> ParamMut<'_> { ParamMut::String(self) }
+    fn kind() -> ParamKind {
+        ParamKind::String
+    }
+    fn as_ref(&self) -> ParamRef<'_> {
+        ParamRef::String(self)
+    }
+    fn as_mut(&mut self) -> ParamMut<'_> {
+        ParamMut::String(self)
+    }
 }
 
 /// Export necessary C bindings for frei0r plugin.
@@ -243,16 +282,71 @@ macro_rules! plugin {
     ($type:ty) => {
         use frei0r_rs::ffi;
 
-        #[no_mangle] pub unsafe extern "C" fn f0r_init() -> ffi::c_int { ffi::f0r_init() }
-        #[no_mangle] pub unsafe extern "C" fn f0r_deinit() { ffi::f0r_deinit()  }
-        #[no_mangle] pub unsafe extern "C" fn f0r_get_plugin_info(info: *mut ffi::f0r_plugin_info_t) { ffi::f0r_get_plugin_info::<$type>(info)  }
-        #[no_mangle] pub unsafe extern "C" fn f0r_get_param_info(info: *mut ffi::f0r_param_info_t, param_index: ffi::c_int) { ffi::f0r_get_param_info::<$type>(info, param_index) }
-        #[no_mangle] pub unsafe extern "C" fn f0r_construct(width : ffi::c_uint, height: ffi::c_uint) -> ffi::f0r_instance_t { ffi::f0r_construct::<$type>(width, height) }
-        #[no_mangle] pub unsafe extern "C" fn f0r_destruct(instance : ffi::f0r_instance_t) { ffi::f0r_destruct::<$type>(instance) }
-        #[no_mangle] pub unsafe extern "C" fn f0r_set_param_value(instance: ffi::f0r_instance_t, param: ffi::f0r_param_t, param_index: ffi::c_int) { ffi::f0r_set_param_value::<$type>(instance, param, param_index)  }
-        #[no_mangle] pub unsafe extern "C" fn f0r_get_param_value(instance: ffi::f0r_instance_t, param: ffi::f0r_param_t, param_index: ffi::c_int) { ffi::f0r_get_param_value::<$type>(instance, param, param_index)  }
-        #[no_mangle] pub unsafe extern "C" fn f0r_update(instance: ffi::f0r_instance_t, time: f64, inframe: *const u32, outframe: *mut u32) { ffi::f0r_update::<$type>(instance, time, inframe, outframe) }
-        #[no_mangle] pub unsafe extern "C" fn f0r_update2(instance: ffi::f0r_instance_t, time: f64, inframe1: *const u32, inframe2: *const u32, inframe3: *const u32, outframe: *mut u32) { ffi::f0r_update2::<$type>(instance, time, inframe1, inframe2, inframe3, outframe) }
-    }
+        #[no_mangle]
+        pub unsafe extern "C" fn f0r_init() -> ffi::c_int {
+            ffi::f0r_init()
+        }
+        #[no_mangle]
+        pub unsafe extern "C" fn f0r_deinit() {
+            ffi::f0r_deinit()
+        }
+        #[no_mangle]
+        pub unsafe extern "C" fn f0r_get_plugin_info(info: *mut ffi::f0r_plugin_info_t) {
+            ffi::f0r_get_plugin_info::<$type>(info)
+        }
+        #[no_mangle]
+        pub unsafe extern "C" fn f0r_get_param_info(
+            info: *mut ffi::f0r_param_info_t,
+            param_index: ffi::c_int,
+        ) {
+            ffi::f0r_get_param_info::<$type>(info, param_index)
+        }
+        #[no_mangle]
+        pub unsafe extern "C" fn f0r_construct(
+            width: ffi::c_uint,
+            height: ffi::c_uint,
+        ) -> ffi::f0r_instance_t {
+            ffi::f0r_construct::<$type>(width, height)
+        }
+        #[no_mangle]
+        pub unsafe extern "C" fn f0r_destruct(instance: ffi::f0r_instance_t) {
+            ffi::f0r_destruct::<$type>(instance)
+        }
+        #[no_mangle]
+        pub unsafe extern "C" fn f0r_set_param_value(
+            instance: ffi::f0r_instance_t,
+            param: ffi::f0r_param_t,
+            param_index: ffi::c_int,
+        ) {
+            ffi::f0r_set_param_value::<$type>(instance, param, param_index)
+        }
+        #[no_mangle]
+        pub unsafe extern "C" fn f0r_get_param_value(
+            instance: ffi::f0r_instance_t,
+            param: ffi::f0r_param_t,
+            param_index: ffi::c_int,
+        ) {
+            ffi::f0r_get_param_value::<$type>(instance, param, param_index)
+        }
+        #[no_mangle]
+        pub unsafe extern "C" fn f0r_update(
+            instance: ffi::f0r_instance_t,
+            time: f64,
+            inframe: *const u32,
+            outframe: *mut u32,
+        ) {
+            ffi::f0r_update::<$type>(instance, time, inframe, outframe)
+        }
+        #[no_mangle]
+        pub unsafe extern "C" fn f0r_update2(
+            instance: ffi::f0r_instance_t,
+            time: f64,
+            inframe1: *const u32,
+            inframe2: *const u32,
+            inframe3: *const u32,
+            outframe: *mut u32,
+        ) {
+            ffi::f0r_update2::<$type>(instance, time, inframe1, inframe2, inframe3, outframe)
+        }
+    };
 }
-
