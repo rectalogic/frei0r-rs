@@ -24,3 +24,29 @@ jobs:
           cargo clippy -- -D warnings
       - name: Build
         run: cargo build --examples --verbose
+      - name: Install
+        run: |
+          if [ "$RUNNER_OS" == "Linux" ]; then
+            sudo apt install ffmpeg
+          elif [ "$RUNNER_OS" == "macOS" ]; then
+            brew install ffmpeg
+          elif [ "$RUNNER_OS" == "Windows" ]; then
+            choco install ffmpeg-full
+          else
+            exit 1
+          fi
+        shell: bash
+      - name: Test
+        env:
+          FREI0R_PATH: ${{ github.workspace }}/target/debug/examples
+        shell: bash
+        run: |
+          # Refer to the plugins using 'libXXX' name for macOS/Linux
+          # https://github.com/rust-lang/cargo/issues/1970
+          if [ "$RUNNER_OS" == "Windows" ]; then
+            PLUGINPREFIX=""
+          else
+            PLUGINPREFIX=lib
+          fi
+          ffmpeg -f lavfi -i 'testsrc=duration=2:size=640x360:rate=30:decimals=2,drawbox=color=red:t=ih/16' -vf "frei0r=filter_name=${PLUGINPREFIX}shift:filter_params=0.5|0.25" -y frei0r_shift.mp4
+          ffmpeg -f lavfi -i "frei0r_src=size=640x360:framerate=30:filter_name=${PLUGINPREFIX}color:filter_params=1.0/0.0/0.0" -t 2 -y frei0r_color.mp4
