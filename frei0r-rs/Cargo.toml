@@ -10,6 +10,10 @@ description = "Rust bindings to the frei0r plugin API"
 name = "shift"
 crate-type = ["cdylib"]
 
+[[example]]
+name = "color"
+crate-type = ["cdylib"]
+
 [dependencies]
 frei0r-macros = { version = "0.2.0", path = "../frei0r-macros" }
 frei0r-sys = { version = "0.1.1", path = "../frei0r-sys" }
