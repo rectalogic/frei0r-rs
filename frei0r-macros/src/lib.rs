@@ -2,53 +2,59 @@ extern crate proc_macro;
 
 use proc_macro::TokenStream;
 
-use syn::*;
 use syn::punctuated::*;
+use syn::*;
 
 use quote::quote;
 
 use std::ffi::CString;
 
 struct FieldInfo {
-    ident : Ident,
-    ty : Type,
-    rename : Option<Expr>,
-    explain : Option<Expr>,
+    ident: Ident,
+    ty: Type,
+    rename: Option<Expr>,
+    explain: Option<Expr>,
 }
 
 impl FieldInfo {
-    fn new(field : Field) -> Result<Option<Self>> {
+    fn new(field: Field) -> Result<Option<Self>> {
         let mut rename = None;
         let mut explain = None;
         for attr in field.attrs {
             if attr.path().is_ident("internal") {
                 return Ok(None);
-            }
-            else if attr.path().is_ident("frei0r") {
-                let name_values: Punctuated<MetaNameValue, Token![,]> = attr.parse_args_with(Punctuated::parse_terminated)?;
+            } else if attr.path().is_ident("frei0r") {
+                let name_values: Punctuated<MetaNameValue, Token![,]> =
+                    attr.parse_args_with(Punctuated::parse_terminated)?;
                 for name_value in name_values {
                     let ident = name_value.path.require_ident()?;
                     match ident {
                         ident if ident == "rename" => {
                             rename = match rename {
-                                Some(_) => Err(Error::new_spanned(name_value, "attempting to set rename attribute more than once"))?,
+                                Some(_) => Err(Error::new_spanned(
+                                    name_value,
+                                    "attempting to set rename attribute more than once",
+                                ))?,
                                 None => Some(name_value.value),
                             };
-                        },
+                        }
                         ident if ident == "explain" => {
                             explain = match explain {
-                                Some(_) => Err(Error::new_spanned(name_value, "attempting to set explain attribute more than once"))?,
+                                Some(_) => Err(Error::new_spanned(
+                                    name_value,
+                                    "attempting to set explain attribute more than once",
+                                ))?,
                                 None => Some(name_value.value),
                             };
-                        },
+                        }
                         _ => Err(Error::new_spanned(name_value, "unknown attribute"))?,
                     }
                 }
             }
         }
         Ok(Some(Self {
-            ident : field.ident.unwrap(),
-            ty : field.ty,
+            ident: field.ident.unwrap(),
+            ty: field.ty,
             rename,
             explain,
         }))
@@ -69,27 +75,43 @@ impl FieldInfo {
 }
 
 struct DeriveInputInfo {
-    ident : Ident,
-    generics : Generics,
-    fields : Vec<FieldInfo>,
+    ident: Ident,
+    generics: Generics,
+    fields: Vec<FieldInfo>,
 }
 
 impl DeriveInputInfo {
-    fn new(derive_input : DeriveInput) -> Result<Self> {
+    fn new(derive_input: DeriveInput) -> Result<Self> {
         match derive_input {
-            DeriveInput { ident, generics, data : Data::Struct(DataStruct { fields : Fields::Named(fields), .. }), .. } => Ok(Self {
+            DeriveInput {
                 ident,
                 generics,
-                fields : fields.named.into_iter().flat_map(|f| FieldInfo::new(f).transpose()).collect::<Result<Vec<FieldInfo>>>()?,
+                data:
+                    Data::Struct(DataStruct {
+                        fields: Fields::Named(fields),
+                        ..
+                    }),
+                ..
+            } => Ok(Self {
+                ident,
+                generics,
+                fields: fields
+                    .named
+                    .into_iter()
+                    .flat_map(|f| FieldInfo::new(f).transpose())
+                    .collect::<Result<Vec<FieldInfo>>>()?,
             }),
-            _ => Err(Error::new_spanned(derive_input,  "Derive macro PluginBase is only supported on struct with named fields."))
+            _ => Err(Error::new_spanned(
+                derive_input,
+                "Derive macro PluginBase is only supported on struct with named fields.",
+            )),
         }
     }
 }
 
 /// Derive macro used in the implementation of [PluginBase](../frei0r_rs/trait.PluginBase.html) trait.
 #[proc_macro_derive(PluginBase, attributes(frei0r, internal))]
-pub fn derive_plugin_base(input : TokenStream) -> TokenStream {
+pub fn derive_plugin_base(input: TokenStream) -> TokenStream {
     DeriveInputInfo::new(parse_macro_input!(input as DeriveInput))
         .map(|info| {
             let generics = info.generics;
@@ -141,4 +163,3 @@ pub fn derive_plugin_base(input : TokenStream) -> TokenStream {
         .unwrap_or_else(|err| err.into_compile_error())
         .into()
 }
-
