@@ -1,5 +1,3 @@
-#![feature(iterator_try_collect)]
-
 extern crate proc_macro;
 
 use proc_macro::TokenStream;
@@ -115,7 +113,7 @@ impl DeriveInputInfo {
             DeriveInput { ident, generics, data : Data::Struct(DataStruct { fields : Fields::Named(fields), .. }), .. } => Ok(Self {
                 ident,
                 generics,
-                fields : fields.named.into_iter().flat_map(|f| FieldInfo::new(f).transpose()).try_collect()?,
+                fields : fields.named.into_iter().flat_map(|f| FieldInfo::new(f).transpose()).collect::<Result<Vec<FieldInfo>>>()?,
             }),
             _ => Err(Error::new_spanned(derive_input,  "Derive macro PluginBase is only supported on struct with named fields."))
         }
