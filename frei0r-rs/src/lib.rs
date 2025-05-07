@@ -187,7 +187,14 @@ pub trait Plugin: PluginBase {
     /// applicable before it returns to the caller.
     ///
     /// This is never called for effect of type [PluginType::Mixer2] and [PluginType::Mixer3].
-    fn update(&self, time: f64, width: usize, height: usize, inframe: &[u32], outframe: &mut [u32]);
+    fn update(
+        &self,
+        time: f64,
+        width: usize,
+        height: usize,
+        inframe: Option<&[u32]>,
+        outframe: &mut [u32],
+    );
 
     /// For effect of type [PluginType::Mixer2] and [PluginType::Mixer3].
     fn update2(
@@ -197,7 +204,7 @@ pub trait Plugin: PluginBase {
         height: usize,
         inframe1: &[u32],
         inframe2: &[u32],
-        inframe3: &[u32],
+        inframe3: Option<&[u32]>,
         outframe: &mut [u32],
     );
 }

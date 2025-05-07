@@ -191,6 +191,14 @@ pub unsafe extern "C" fn f0r_get_param_value<P: Plugin>(
     };
 }
 
+fn frame_to_slice(frame: &*const u32, length: usize) -> Option<&[u32]> {
+    if frame.is_null() {
+        None
+    } else {
+        Some(unsafe { std::slice::from_raw_parts(*frame, length) })
+    }
+}
+
 #[doc(hidden)]
 pub unsafe extern "C" fn f0r_update<P: Plugin>(
     instance: f0r_instance_t,
@@ -199,8 +207,9 @@ pub unsafe extern "C" fn f0r_update<P: Plugin>(
     outframe: *mut u32,
 ) {
     let instance = &mut *(instance as *mut Instance<P>);
-    let inframe = std::slice::from_raw_parts(inframe, instance.width * instance.height);
-    let outframe = std::slice::from_raw_parts_mut(outframe, instance.width * instance.height);
+    let length = instance.width * instance.height;
+    let inframe = frame_to_slice(&inframe, length);
+    let outframe = std::slice::from_raw_parts_mut(outframe, length);
     instance
         .inner
         .update(time, instance.width, instance.height, inframe, outframe);
@@ -216,10 +225,11 @@ pub unsafe extern "C" fn f0r_update2<P: Plugin>(
     outframe: *mut u32,
 ) {
     let instance = &mut *(instance as *mut Instance<P>);
-    let inframe1 = std::slice::from_raw_parts(inframe1, instance.width * instance.height);
-    let inframe2 = std::slice::from_raw_parts(inframe2, instance.width * instance.height);
-    let inframe3 = std::slice::from_raw_parts(inframe3, instance.width * instance.height);
-    let outframe = std::slice::from_raw_parts_mut(outframe, instance.width * instance.height);
+    let length = instance.width * instance.height;
+    let inframe1 = std::slice::from_raw_parts(inframe1, length);
+    let inframe2 = std::slice::from_raw_parts(inframe2, length);
+    let inframe3 = frame_to_slice(&inframe3, length);
+    let outframe = std::slice::from_raw_parts_mut(outframe, length);
     instance.inner.update2(
         time,
         instance.width,
