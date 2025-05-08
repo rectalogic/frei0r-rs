@@ -180,13 +180,11 @@ pub unsafe extern "C" fn f0r_get_param_value<P: Plugin>(
             assert!(P::param_info(param_index).kind == ParamKind::String);
 
             let param = unsafe { &mut *(param as *mut f0r_param_string) };
-            *param = value.as_ptr() as f0r_param_string; // We are casting away constness here.
-                                                         // This should be fine since quoting the
-                                                         // comment found in the original header,
-                                                         // "If the caller needs to modify the
-                                                         // value, it should make a copy of it and
-                                                         // modify before calling
-                                                         // f0r_set_param_value()."
+            // We are casting away constness here. This should be fine since quoting the
+            // comment found in the original header, "If the caller needs to modify the
+            // value, it should make a copy of it and modify before calling
+            // f0r_set_param_value()."
+            *param = value.as_ptr() as f0r_param_string;
         }
     };
 }
@@ -206,10 +204,10 @@ pub unsafe extern "C" fn f0r_update<P: Plugin>(
     inframe: *const u32,
     outframe: *mut u32,
 ) {
-    let instance = &mut *(instance as *mut Instance<P>);
+    let instance = unsafe { &mut *(instance as *mut Instance<P>) };
     let length = instance.width * instance.height;
     let inframe = frame_to_slice(&inframe, length);
-    let outframe = std::slice::from_raw_parts_mut(outframe, length);
+    let outframe = unsafe { std::slice::from_raw_parts_mut(outframe, length) };
     instance
         .inner
         .update(time, instance.width, instance.height, inframe, outframe);
@@ -224,12 +222,12 @@ pub unsafe extern "C" fn f0r_update2<P: Plugin>(
     inframe3: *const u32,
     outframe: *mut u32,
 ) {
-    let instance = &mut *(instance as *mut Instance<P>);
+    let instance = unsafe { &mut *(instance as *mut Instance<P>) };
     let length = instance.width * instance.height;
-    let inframe1 = std::slice::from_raw_parts(inframe1, length);
-    let inframe2 = std::slice::from_raw_parts(inframe2, length);
+    let inframe1 = unsafe { std::slice::from_raw_parts(inframe1, length) };
+    let inframe2 = unsafe { std::slice::from_raw_parts(inframe2, length) };
     let inframe3 = frame_to_slice(&inframe3, length);
-    let outframe = std::slice::from_raw_parts_mut(outframe, length);
+    let outframe = unsafe { std::slice::from_raw_parts_mut(outframe, length) };
     instance.inner.update2(
         time,
         instance.width,

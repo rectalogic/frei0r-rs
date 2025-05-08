@@ -289,62 +289,62 @@ macro_rules! plugin {
     ($type:ty) => {
         use frei0r_rs::ffi;
 
-        #[no_mangle]
+        #[unsafe(no_mangle)]
         pub unsafe extern "C" fn f0r_init() -> ffi::c_int {
-            ffi::f0r_init()
+            unsafe { ffi::f0r_init() }
         }
-        #[no_mangle]
+        #[unsafe(no_mangle)]
         pub unsafe extern "C" fn f0r_deinit() {
-            ffi::f0r_deinit()
+            unsafe { ffi::f0r_deinit() }
         }
-        #[no_mangle]
+        #[unsafe(no_mangle)]
         pub unsafe extern "C" fn f0r_get_plugin_info(info: *mut ffi::f0r_plugin_info_t) {
-            ffi::f0r_get_plugin_info::<$type>(info)
+            unsafe { ffi::f0r_get_plugin_info::<$type>(info) }
         }
-        #[no_mangle]
+        #[unsafe(no_mangle)]
         pub unsafe extern "C" fn f0r_get_param_info(
             info: *mut ffi::f0r_param_info_t,
             param_index: ffi::c_int,
         ) {
-            ffi::f0r_get_param_info::<$type>(info, param_index)
+            unsafe { ffi::f0r_get_param_info::<$type>(info, param_index) }
         }
-        #[no_mangle]
+        #[unsafe(no_mangle)]
         pub unsafe extern "C" fn f0r_construct(
             width: ffi::c_uint,
             height: ffi::c_uint,
         ) -> ffi::f0r_instance_t {
-            ffi::f0r_construct::<$type>(width, height)
+            unsafe { ffi::f0r_construct::<$type>(width, height) }
         }
-        #[no_mangle]
+        #[unsafe(no_mangle)]
         pub unsafe extern "C" fn f0r_destruct(instance: ffi::f0r_instance_t) {
-            ffi::f0r_destruct::<$type>(instance)
+            unsafe { ffi::f0r_destruct::<$type>(instance) }
         }
-        #[no_mangle]
+        #[unsafe(no_mangle)]
         pub unsafe extern "C" fn f0r_set_param_value(
             instance: ffi::f0r_instance_t,
             param: ffi::f0r_param_t,
             param_index: ffi::c_int,
         ) {
-            ffi::f0r_set_param_value::<$type>(instance, param, param_index)
+            unsafe { ffi::f0r_set_param_value::<$type>(instance, param, param_index) }
         }
-        #[no_mangle]
+        #[unsafe(no_mangle)]
         pub unsafe extern "C" fn f0r_get_param_value(
             instance: ffi::f0r_instance_t,
             param: ffi::f0r_param_t,
             param_index: ffi::c_int,
         ) {
-            ffi::f0r_get_param_value::<$type>(instance, param, param_index)
+            unsafe { ffi::f0r_get_param_value::<$type>(instance, param, param_index) }
         }
-        #[no_mangle]
+        #[unsafe(no_mangle)]
         pub unsafe extern "C" fn f0r_update(
             instance: ffi::f0r_instance_t,
             time: f64,
             inframe: *const u32,
             outframe: *mut u32,
         ) {
-            ffi::f0r_update::<$type>(instance, time, inframe, outframe)
+            unsafe { ffi::f0r_update::<$type>(instance, time, inframe, outframe) }
         }
-        #[no_mangle]
+        #[unsafe(no_mangle)]
         pub unsafe extern "C" fn f0r_update2(
             instance: ffi::f0r_instance_t,
             time: f64,
@@ -353,7 +353,9 @@ macro_rules! plugin {
             inframe3: *const u32,
             outframe: *mut u32,
         ) {
-            ffi::f0r_update2::<$type>(instance, time, inframe1, inframe2, inframe3, outframe)
+            unsafe {
+                ffi::f0r_update2::<$type>(instance, time, inframe1, inframe2, inframe3, outframe)
+            }
         }
     };
 }
