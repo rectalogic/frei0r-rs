@@ -8,7 +8,7 @@ pub struct ShiftPlugin {
     xshift: f64,
     #[frei0r(explain = c"Shift in y direction")]
     yshift: f64,
-    #[internal]
+    // Private internal field
     extra: Extra,
 }
 
