@@ -34,7 +34,7 @@ impl Plugin for ShiftPlugin {
     }
 
     fn filter_update(
-        &self,
+        &mut self,
         _time: f64,
         width: usize,
         height: usize,

@@ -29,7 +29,7 @@ impl Plugin for ColorPlugin {
         }
     }
 
-    fn source_update(&self, _time: f64, width: usize, height: usize, outframe: &mut [u32]) {
+    fn source_update(&mut self, _time: f64, width: usize, height: usize, outframe: &mut [u32]) {
         let r_u8 = (self.color.r * 255.0) as u8;
         let g_u8 = (self.color.g * 255.0) as u8;
         let b_u8 = (self.color.b * 255.0) as u8;
