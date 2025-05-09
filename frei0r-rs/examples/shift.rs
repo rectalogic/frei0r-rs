@@ -33,40 +33,25 @@ impl Plugin for ShiftPlugin {
         }
     }
 
-    fn update(
+    fn filter_update(
         &self,
         _time: f64,
         width: usize,
         height: usize,
-        inframe: Option<&[u32]>,
+        inframe: &[u32],
         outframe: &mut [u32],
     ) {
-        if let Some(inframe) = inframe {
-            let xshift = (self.xshift * width as f64) as usize;
-            let yshift = (self.yshift * height as f64) as usize;
-            for dy in 0..height {
-                for dx in 0..width {
-                    let sy = (dy + yshift) % height;
-                    let sx = (dx + xshift) % width;
-                    outframe[dy * width + dx] = inframe[sy * width + sx];
-                }
+        let xshift = (self.xshift * width as f64) as usize;
+        let yshift = (self.yshift * height as f64) as usize;
+        for dy in 0..height {
+            for dx in 0..width {
+                let sy = (dy + yshift) % height;
+                let sx = (dx + xshift) % width;
+                outframe[dy * width + dx] = inframe[sy * width + sx];
             }
-            // Do something with internal field
-            let _extra = &self.extra;
         }
-    }
-
-    fn update2(
-        &self,
-        _: f64,
-        _width: usize,
-        _height: usize,
-        _inframe1: &[u32],
-        _inframe2: &[u32],
-        _inframe3: Option<&[u32]>,
-        _outframe: &mut [u32],
-    ) {
-        unreachable!()
+        // Do something with internal field
+        let _extra = &self.extra;
     }
 }
 

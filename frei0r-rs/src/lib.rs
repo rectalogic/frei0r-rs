@@ -168,6 +168,12 @@ pub struct PluginInfo {
 }
 
 /// The plugin type.
+///
+/// The update functions are where the core effect processing happens. The application calls it after it has
+/// set the necessary parameter values.
+///
+/// The function is responsible to restore the fpu state (e.g. rounding mode) and mmx state if
+/// applicable before it returns to the caller.
 pub trait Plugin: PluginBase {
     /// Called by the application to query plugin information.
     fn info() -> PluginInfo;
@@ -180,33 +186,49 @@ pub trait Plugin: PluginBase {
     /// The plugin must set default values for all parameters in this function.
     fn new(width: usize, height: usize) -> Self;
 
-    /// This is where the core effect processing happens. The application calls it after it has
-    /// set the necessary parameter values.
-    ///
-    /// The function is responsible to restore the fpu state (e.g. rounding mode) and mmx state if
-    /// applicable before it returns to the caller.
-    ///
-    /// This is never called for effect of type [PluginType::Mixer2] and [PluginType::Mixer3].
-    fn update(
-        &self,
-        time: f64,
-        width: usize,
-        height: usize,
-        inframe: Option<&[u32]>,
-        outframe: &mut [u32],
-    );
+    /// Must implement for effect of type [PluginType::Source]
+    fn source_update(&self, _time: f64, _width: usize, _height: usize, _outframe: &mut [u32]) {
+        unimplemented!("This plugin must implement source_update");
+    }
 
-    /// For effect of type [PluginType::Mixer2] and [PluginType::Mixer3].
-    fn update2(
+    /// Must implement for effect of type [PluginType::Filter]
+    fn filter_update(
         &self,
-        time: f64,
-        width: usize,
-        height: usize,
-        inframe1: &[u32],
-        inframe2: &[u32],
-        inframe3: Option<&[u32]>,
-        outframe: &mut [u32],
-    );
+        _time: f64,
+        _width: usize,
+        _height: usize,
+        _inframe: &[u32],
+        _outframe: &mut [u32],
+    ) {
+        unimplemented!("This plugin must implement filter_update");
+    }
+
+    /// Must implement for effect of type [PluginType::Mixer2]
+    fn mixer2_update(
+        &self,
+        _time: f64,
+        _width: usize,
+        _height: usize,
+        _inframe1: &[u32],
+        _inframe2: &[u32],
+        _outframe: &mut [u32],
+    ) {
+        unimplemented!("This plugin must implement mixer2_update");
+    }
+
+    /// Must implement for effect of type [PluginType::Mixer3]
+    fn mixer3_update(
+        &self,
+        _time: f64,
+        _width: usize,
+        _height: usize,
+        _inframe1: &[u32],
+        _inframe2: &[u32],
+        _inframe3: &[u32],
+        _outframe: &mut [u32],
+    ) {
+        unimplemented!("This plugin must implement mixer3_update");
+    }
 }
 
 pub use frei0r_macros::PluginBase;

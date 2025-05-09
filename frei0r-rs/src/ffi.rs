@@ -71,6 +71,7 @@ pub unsafe fn f0r_get_param_info<P: Plugin>(info: *mut f0r_param_info_t, param_i
 pub struct Instance<P: Plugin> {
     width: usize,
     height: usize,
+    plugin_type: PluginType,
     inner: P,
 }
 
@@ -82,6 +83,7 @@ pub unsafe extern "C" fn f0r_construct<P: Plugin>(width: c_uint, height: c_uint)
     let instance = Instance {
         width,
         height,
+        plugin_type: P::info().plugin_type,
         inner: instance,
     };
     Box::into_raw(Box::new(instance)) as f0r_instance_t
@@ -189,11 +191,11 @@ pub unsafe extern "C" fn f0r_get_param_value<P: Plugin>(
     };
 }
 
-fn frame_to_slice(frame: &*const u32, length: usize) -> Option<&[u32]> {
+fn frame_to_slice(frame: &*const u32, length: usize) -> &[u32] {
     if frame.is_null() {
-        None
+        panic!("Unexpected null frame");
     } else {
-        Some(unsafe { std::slice::from_raw_parts(*frame, length) })
+        unsafe { std::slice::from_raw_parts(*frame, length) }
     }
 }
 
@@ -204,13 +206,16 @@ pub unsafe extern "C" fn f0r_update<P: Plugin>(
     inframe: *const u32,
     outframe: *mut u32,
 ) {
-    let instance = unsafe { &mut *(instance as *mut Instance<P>) };
-    let length = instance.width * instance.height;
-    let inframe = frame_to_slice(&inframe, length);
-    let outframe = unsafe { std::slice::from_raw_parts_mut(outframe, length) };
-    instance
-        .inner
-        .update(time, instance.width, instance.height, inframe, outframe);
+    unsafe {
+        f0r_update2::<P>(
+            instance,
+            time,
+            inframe,
+            std::ptr::null(),
+            std::ptr::null(),
+            outframe,
+        )
+    };
 }
 
 #[doc(hidden)]
@@ -224,17 +229,45 @@ pub unsafe extern "C" fn f0r_update2<P: Plugin>(
 ) {
     let instance = unsafe { &mut *(instance as *mut Instance<P>) };
     let length = instance.width * instance.height;
-    let inframe1 = unsafe { std::slice::from_raw_parts(inframe1, length) };
-    let inframe2 = unsafe { std::slice::from_raw_parts(inframe2, length) };
-    let inframe3 = frame_to_slice(&inframe3, length);
+    if outframe.is_null() {
+        panic!("unexpected null output frame");
+    }
     let outframe = unsafe { std::slice::from_raw_parts_mut(outframe, length) };
-    instance.inner.update2(
-        time,
-        instance.width,
-        instance.height,
-        inframe1,
-        inframe2,
-        inframe3,
-        outframe,
-    );
+    match instance.plugin_type {
+        PluginType::Source => {
+            instance
+                .inner
+                .source_update(time, instance.width, instance.height, outframe);
+        }
+        PluginType::Filter => {
+            instance.inner.filter_update(
+                time,
+                instance.width,
+                instance.height,
+                frame_to_slice(&inframe1, length),
+                outframe,
+            );
+        }
+        PluginType::Mixer2 => {
+            instance.inner.mixer2_update(
+                time,
+                instance.width,
+                instance.height,
+                frame_to_slice(&inframe1, length),
+                frame_to_slice(&inframe2, length),
+                outframe,
+            );
+        }
+        PluginType::Mixer3 => {
+            instance.inner.mixer3_update(
+                time,
+                instance.width,
+                instance.height,
+                frame_to_slice(&inframe1, length),
+                frame_to_slice(&inframe2, length),
+                frame_to_slice(&inframe3, length),
+                outframe,
+            );
+        }
+    }
 }
