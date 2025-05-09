@@ -1,15 +1,13 @@
 use frei0r_rs::*;
 
-struct Extra;
-
 #[derive(PluginBase)]
 pub struct ShiftPlugin {
     #[frei0r(explain = c"Shift in x direction")]
     xshift: f64,
     #[frei0r(explain = c"Shift in y direction")]
     yshift: f64,
-    // Private internal field
-    extra: Extra,
+    width: usize,
+    height: usize,
 }
 
 impl Plugin for ShiftPlugin {
@@ -25,33 +23,25 @@ impl Plugin for ShiftPlugin {
         }
     }
 
-    fn new(_width: usize, _height: usize) -> Self {
+    fn new(width: usize, height: usize) -> Self {
         Self {
             xshift: 0.0,
             yshift: 0.0,
-            extra: Extra,
+            width,
+            height,
         }
     }
 
-    fn filter_update(
-        &mut self,
-        _time: f64,
-        width: usize,
-        height: usize,
-        inframe: &[u32],
-        outframe: &mut [u32],
-    ) {
-        let xshift = (self.xshift * width as f64) as usize;
-        let yshift = (self.yshift * height as f64) as usize;
-        for dy in 0..height {
-            for dx in 0..width {
-                let sy = (dy + yshift) % height;
-                let sx = (dx + xshift) % width;
-                outframe[dy * width + dx] = inframe[sy * width + sx];
+    fn filter_update(&mut self, _time: f64, inframe: &[u32], outframe: &mut [u32]) {
+        let xshift = (self.xshift * self.width as f64) as usize;
+        let yshift = (self.yshift * self.height as f64) as usize;
+        for dy in 0..self.height {
+            for dx in 0..self.width {
+                let sy = (dy + yshift) % self.height;
+                let sx = (dx + xshift) % self.width;
+                outframe[dy * self.width + dx] = inframe[sy * self.width + sx];
             }
         }
-        // Do something with internal field
-        let _extra = &self.extra;
     }
 }
 

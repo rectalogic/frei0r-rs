@@ -4,6 +4,8 @@ use frei0r_rs::*;
 pub struct ColorPlugin {
     #[frei0r(explain = c"Color to generate")]
     color: Color,
+    width: usize,
+    height: usize,
 }
 
 impl Plugin for ColorPlugin {
@@ -19,17 +21,19 @@ impl Plugin for ColorPlugin {
         }
     }
 
-    fn new(_width: usize, _height: usize) -> Self {
+    fn new(width: usize, height: usize) -> Self {
         Self {
             color: Color {
                 r: 1.0,
                 g: 0.0,
                 b: 0.0,
             },
+            width,
+            height,
         }
     }
 
-    fn source_update(&mut self, _time: f64, width: usize, height: usize, outframe: &mut [u32]) {
+    fn source_update(&mut self, _time: f64, outframe: &mut [u32]) {
         let r_u8 = (self.color.r * 255.0) as u8;
         let g_u8 = (self.color.g * 255.0) as u8;
         let b_u8 = (self.color.b * 255.0) as u8;
@@ -37,9 +41,9 @@ impl Plugin for ColorPlugin {
         let pixel =
             ((r_u8 as u32) << 24) | ((g_u8 as u32) << 16) | ((b_u8 as u32) << 8) | (a_u8 as u32);
 
-        for dy in 0..height {
-            for dx in 0..width {
-                outframe[dy * width + dx] = pixel;
+        for dy in 0..self.height {
+            for dx in 0..self.width {
+                outframe[dy * self.width + dx] = pixel;
             }
         }
     }
