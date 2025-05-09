@@ -29,14 +29,7 @@ impl Plugin for ColorPlugin {
         }
     }
 
-    fn update(
-        &self,
-        _time: f64,
-        width: usize,
-        height: usize,
-        _inframe: Option<&[u32]>,
-        outframe: &mut [u32],
-    ) {
+    fn source_update(&self, _time: f64, width: usize, height: usize, outframe: &mut [u32]) {
         let r_u8 = (self.color.r * 255.0) as u8;
         let g_u8 = (self.color.g * 255.0) as u8;
         let b_u8 = (self.color.b * 255.0) as u8;
@@ -49,19 +42,6 @@ impl Plugin for ColorPlugin {
                 outframe[dy * width + dx] = pixel;
             }
         }
-    }
-
-    fn update2(
-        &self,
-        _: f64,
-        _width: usize,
-        _height: usize,
-        _inframe1: &[u32],
-        _inframe2: &[u32],
-        _inframe3: Option<&[u32]>,
-        _outframe: &mut [u32],
-    ) {
-        unreachable!()
     }
 }
 
