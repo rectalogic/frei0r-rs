@@ -69,8 +69,7 @@ pub unsafe fn f0r_get_param_info<P: Plugin>(info: *mut f0r_param_info_t, param_i
 }
 
 pub struct Instance<P: Plugin> {
-    width: usize,
-    height: usize,
+    frame_length: usize,
     plugin_type: PluginType,
     inner: P,
 }
@@ -81,8 +80,7 @@ pub unsafe extern "C" fn f0r_construct<P: Plugin>(width: c_uint, height: c_uint)
     let height = height.try_into().unwrap();
     let instance = P::new(width, height);
     let instance = Instance {
-        width,
-        height,
+        frame_length: width * height,
         plugin_type: P::info().plugin_type,
         inner: instance,
     };
@@ -228,44 +226,35 @@ pub unsafe extern "C" fn f0r_update2<P: Plugin>(
     outframe: *mut u32,
 ) {
     let instance = unsafe { &mut *(instance as *mut Instance<P>) };
-    let length = instance.width * instance.height;
     if outframe.is_null() {
         panic!("unexpected null output frame");
     }
-    let outframe = unsafe { std::slice::from_raw_parts_mut(outframe, length) };
+    let outframe = unsafe { std::slice::from_raw_parts_mut(outframe, instance.frame_length) };
     match instance.plugin_type {
         PluginType::Source => {
-            instance
-                .inner
-                .source_update(time, instance.width, instance.height, outframe);
+            instance.inner.source_update(time, outframe);
         }
         PluginType::Filter => {
             instance.inner.filter_update(
                 time,
-                instance.width,
-                instance.height,
-                frame_to_slice(&inframe1, length),
+                frame_to_slice(&inframe1, instance.frame_length),
                 outframe,
             );
         }
         PluginType::Mixer2 => {
             instance.inner.mixer2_update(
                 time,
-                instance.width,
-                instance.height,
-                frame_to_slice(&inframe1, length),
-                frame_to_slice(&inframe2, length),
+                frame_to_slice(&inframe1, instance.frame_length),
+                frame_to_slice(&inframe2, instance.frame_length),
                 outframe,
             );
         }
         PluginType::Mixer3 => {
             instance.inner.mixer3_update(
                 time,
-                instance.width,
-                instance.height,
-                frame_to_slice(&inframe1, length),
-                frame_to_slice(&inframe2, length),
-                frame_to_slice(&inframe3, length),
+                frame_to_slice(&inframe1, instance.frame_length),
+                frame_to_slice(&inframe2, instance.frame_length),
+                frame_to_slice(&inframe3, instance.frame_length),
                 outframe,
             );
         }

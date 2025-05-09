@@ -187,19 +187,12 @@ pub trait Plugin: PluginBase {
     fn new(width: usize, height: usize) -> Self;
 
     /// Must implement for effect of type [PluginType::Source]
-    fn source_update(&mut self, _time: f64, _width: usize, _height: usize, _outframe: &mut [u32]) {
+    fn source_update(&mut self, _time: f64, _outframe: &mut [u32]) {
         unimplemented!("This plugin must implement source_update");
     }
 
     /// Must implement for effect of type [PluginType::Filter]
-    fn filter_update(
-        &mut self,
-        _time: f64,
-        _width: usize,
-        _height: usize,
-        _inframe: &[u32],
-        _outframe: &mut [u32],
-    ) {
+    fn filter_update(&mut self, _time: f64, _inframe: &[u32], _outframe: &mut [u32]) {
         unimplemented!("This plugin must implement filter_update");
     }
 
@@ -207,8 +200,6 @@ pub trait Plugin: PluginBase {
     fn mixer2_update(
         &mut self,
         _time: f64,
-        _width: usize,
-        _height: usize,
         _inframe1: &[u32],
         _inframe2: &[u32],
         _outframe: &mut [u32],
@@ -220,8 +211,6 @@ pub trait Plugin: PluginBase {
     fn mixer3_update(
         &mut self,
         _time: f64,
-        _width: usize,
-        _height: usize,
         _inframe1: &[u32],
         _inframe2: &[u32],
         _inframe3: &[u32],
