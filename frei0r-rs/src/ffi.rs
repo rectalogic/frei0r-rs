@@ -18,15 +18,15 @@ use frei0r_sys::*;
 use std::ffi::CStr;
 
 #[doc(hidden)]
-pub unsafe extern "C" fn f0r_init() -> c_int {
+pub fn f0r_init() -> c_int {
     1
 }
 
 #[doc(hidden)]
-pub unsafe extern "C" fn f0r_deinit() {}
+pub fn f0r_deinit() {}
 
 #[doc(hidden)]
-pub unsafe extern "C" fn f0r_get_plugin_info<P: Plugin>(info: *mut f0r_plugin_info_t) {
+pub unsafe fn f0r_get_plugin_info<P: Plugin>(info: *mut f0r_plugin_info_t) {
     let info = unsafe { &mut *info };
     let our_info = P::info();
 
@@ -74,7 +74,7 @@ pub struct Instance<P: Plugin> {
 }
 
 #[doc(hidden)]
-pub unsafe extern "C" fn f0r_construct<P: Plugin>(width: c_uint, height: c_uint) -> f0r_instance_t {
+pub fn f0r_construct<P: Plugin>(width: c_uint, height: c_uint) -> f0r_instance_t {
     let width = width.try_into().unwrap();
     let height = height.try_into().unwrap();
     let instance = P::new(width, height);
@@ -86,13 +86,13 @@ pub unsafe extern "C" fn f0r_construct<P: Plugin>(width: c_uint, height: c_uint)
 }
 
 #[doc(hidden)]
-pub unsafe extern "C" fn f0r_destruct<P: Plugin>(instance: f0r_instance_t) {
+pub unsafe fn f0r_destruct<P: Plugin>(instance: f0r_instance_t) {
     let instance = unsafe { Box::from_raw(instance as *mut Instance<P>) };
     drop(instance)
 }
 
 #[doc(hidden)]
-pub unsafe extern "C" fn f0r_set_param_value<P: Plugin>(
+pub unsafe fn f0r_set_param_value<P: Plugin>(
     instance: f0r_instance_t,
     param: f0r_param_t,
     param_index: c_int,
@@ -138,7 +138,7 @@ pub unsafe extern "C" fn f0r_set_param_value<P: Plugin>(
 }
 
 #[doc(hidden)]
-pub unsafe extern "C" fn f0r_get_param_value<P: Plugin>(
+pub unsafe fn f0r_get_param_value<P: Plugin>(
     instance: f0r_instance_t,
     param: f0r_param_t,
     param_index: c_int,
@@ -196,7 +196,7 @@ fn frame_to_slice(frame: &*const u32, length: usize) -> &[u32] {
 }
 
 #[doc(hidden)]
-pub unsafe extern "C" fn f0r_update<P: Plugin>(
+pub unsafe fn f0r_update<P: Plugin>(
     instance: f0r_instance_t,
     time: f64,
     inframe: *const u32,
@@ -215,7 +215,7 @@ pub unsafe extern "C" fn f0r_update<P: Plugin>(
 }
 
 #[doc(hidden)]
-pub unsafe extern "C" fn f0r_update2<P: Plugin>(
+pub unsafe fn f0r_update2<P: Plugin>(
     instance: f0r_instance_t,
     time: f64,
     inframe1: *const u32,
