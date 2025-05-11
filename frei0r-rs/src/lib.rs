@@ -303,11 +303,11 @@ macro_rules! plugin {
 
         #[unsafe(no_mangle)]
         pub unsafe extern "C" fn f0r_init() -> ffi::c_int {
-            unsafe { ffi::f0r_init() }
+            ffi::f0r_init()
         }
         #[unsafe(no_mangle)]
         pub unsafe extern "C" fn f0r_deinit() {
-            unsafe { ffi::f0r_deinit() }
+            ffi::f0r_deinit()
         }
         #[unsafe(no_mangle)]
         pub unsafe extern "C" fn f0r_get_plugin_info(info: *mut ffi::f0r_plugin_info_t) {
@@ -325,7 +325,7 @@ macro_rules! plugin {
             width: ffi::c_uint,
             height: ffi::c_uint,
         ) -> ffi::f0r_instance_t {
-            unsafe { ffi::f0r_construct::<$type>(width, height) }
+            ffi::f0r_construct::<$type>(width, height)
         }
         #[unsafe(no_mangle)]
         pub unsafe extern "C" fn f0r_destruct(instance: ffi::f0r_instance_t) {
