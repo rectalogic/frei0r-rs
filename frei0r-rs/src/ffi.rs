@@ -32,7 +32,7 @@ pub unsafe extern "C" fn f0r_get_plugin_info<P: Plugin>(info: *mut f0r_plugin_in
 
     info.name = our_info.name.as_ptr();
     info.author = our_info.author.as_ptr();
-    info.plugin_type = match our_info.plugin_type {
+    info.plugin_type = match P::PLUGIN_TYPE {
         PluginType::Filter => F0R_PLUGIN_TYPE_FILTER as i32,
         PluginType::Source => F0R_PLUGIN_TYPE_SOURCE as i32,
         PluginType::Mixer2 => F0R_PLUGIN_TYPE_MIXER2 as i32,
@@ -70,7 +70,6 @@ pub unsafe fn f0r_get_param_info<P: Plugin>(info: *mut f0r_param_info_t, param_i
 
 pub struct Instance<P: Plugin> {
     frame_length: usize,
-    plugin_type: PluginType,
     inner: P,
 }
 
@@ -81,7 +80,6 @@ pub unsafe extern "C" fn f0r_construct<P: Plugin>(width: c_uint, height: c_uint)
     let instance = P::new(width, height);
     let instance = Instance {
         frame_length: width * height,
-        plugin_type: P::info().plugin_type,
         inner: instance,
     };
     Box::into_raw(Box::new(instance)) as f0r_instance_t
@@ -230,7 +228,7 @@ pub unsafe extern "C" fn f0r_update2<P: Plugin>(
         panic!("unexpected null output frame");
     }
     let outframe = unsafe { std::slice::from_raw_parts_mut(outframe, instance.frame_length) };
-    match instance.plugin_type {
+    match P::PLUGIN_TYPE {
         PluginType::Source => {
             instance.inner.source_update(time, outframe);
         }

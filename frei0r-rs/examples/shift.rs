@@ -11,11 +11,12 @@ pub struct ShiftPlugin {
 }
 
 impl Plugin for ShiftPlugin {
+    const PLUGIN_TYPE: PluginType = PluginType::Filter;
+
     fn info() -> PluginInfo {
         PluginInfo {
             name: c"frei0r-rs shift",
             author: c"none",
-            plugin_type: PluginType::Filter,
             color_model: ColorModel::RGBA8888,
             major_version: 1,
             minor_version: 0,
