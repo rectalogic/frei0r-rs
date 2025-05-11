@@ -155,8 +155,6 @@ pub struct PluginInfo {
     pub name: &'static CStr,
     /// The plugin author
     pub author: &'static CStr,
-    /// The plugin type
-    pub plugin_type: PluginType,
     /// The color model used
     pub color_model: ColorModel,
     /// The major version of the plugin
@@ -175,6 +173,9 @@ pub struct PluginInfo {
 /// The function is responsible to restore the fpu state (e.g. rounding mode) and mmx state if
 /// applicable before it returns to the caller.
 pub trait Plugin: PluginBase {
+    /// The plugin type
+    const PLUGIN_TYPE: PluginType;
+
     /// Called by the application to query plugin information.
     fn info() -> PluginInfo;
 

@@ -9,11 +9,12 @@ pub struct ColorPlugin {
 }
 
 impl Plugin for ColorPlugin {
+    const PLUGIN_TYPE: PluginType = PluginType::Source;
+
     fn info() -> PluginInfo {
         PluginInfo {
             name: c"frei0r-rs color",
             author: c"none",
-            plugin_type: PluginType::Source,
             color_model: ColorModel::RGBA8888,
             major_version: 1,
             minor_version: 0,
