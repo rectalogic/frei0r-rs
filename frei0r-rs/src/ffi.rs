@@ -1,9 +1,8 @@
 use crate::ColorModel;
-use crate::ParamKind;
-use crate::ParamMut;
-use crate::ParamRef;
 use crate::Plugin;
-use crate::PluginType;
+use crate::PluginUpdate;
+use crate::{FilterPlugin, Mixer2Plugin, Mixer3Plugin, SourcePlugin};
+use crate::{ParamKind, ParamMut, ParamRef};
 
 pub use frei0r_sys::f0r_instance_t;
 pub use frei0r_sys::f0r_param_info_t;
@@ -16,6 +15,138 @@ pub use std::ffi::c_void;
 
 use frei0r_sys::*;
 use std::ffi::CStr;
+
+mod private {
+    pub trait Sealed {}
+}
+
+/// Marker trait to determine type of plugin.
+pub trait PluginKind: private::Sealed {
+    const PLUGIN_TYPE: i32;
+}
+
+/// Marker type representing a Source plugin.
+#[derive(Debug, Clone, Copy)]
+pub struct KindSource;
+impl private::Sealed for KindSource {}
+impl PluginKind for KindSource {
+    const PLUGIN_TYPE: i32 = F0R_PLUGIN_TYPE_SOURCE as i32;
+}
+
+/// Marker type representing a Filter plugin.
+#[derive(Debug, Clone, Copy)]
+pub struct KindFilter;
+impl private::Sealed for KindFilter {}
+impl PluginKind for KindFilter {
+    const PLUGIN_TYPE: i32 = F0R_PLUGIN_TYPE_FILTER as i32;
+}
+
+/// Marker type representing a Mixer2 plugin.
+#[derive(Debug, Clone, Copy)]
+pub struct KindMixer2;
+impl private::Sealed for KindMixer2 {}
+impl PluginKind for KindMixer2 {
+    const PLUGIN_TYPE: i32 = F0R_PLUGIN_TYPE_MIXER2 as i32;
+}
+
+/// Marker type representing a Mixer3 plugin.
+#[derive(Debug, Clone, Copy)]
+pub struct KindMixer3;
+impl private::Sealed for KindMixer3 {}
+impl PluginKind for KindMixer3 {
+    const PLUGIN_TYPE: i32 = F0R_PLUGIN_TYPE_MIXER3 as i32;
+}
+
+pub trait PluginKindType<K: PluginKind> {
+    fn update(
+        &mut self,
+        frame_length: usize,
+        time: f64,
+        inframe1: *const u32,
+        inframe2: *const u32,
+        inframe3: *const u32,
+        outframe: &mut [u32],
+    );
+}
+
+impl<T> PluginKindType<KindSource> for T
+where
+    T: SourcePlugin,
+{
+    fn update(
+        &mut self,
+        _frame_length: usize,
+        time: f64,
+        _inframe1: *const u32,
+        _inframe2: *const u32,
+        _inframe3: *const u32,
+        outframe: &mut [u32],
+    ) {
+        self.update_source(time, outframe);
+    }
+}
+
+impl<T> PluginKindType<KindFilter> for T
+where
+    T: FilterPlugin,
+{
+    fn update(
+        &mut self,
+        frame_length: usize,
+        time: f64,
+        inframe1: *const u32,
+        _inframe2: *const u32,
+        _inframe3: *const u32,
+        outframe: &mut [u32],
+    ) {
+        self.update_filter(time, frame_to_slice(&inframe1, frame_length), outframe);
+    }
+}
+
+impl<T> PluginKindType<KindMixer2> for T
+where
+    T: Mixer2Plugin,
+{
+    fn update(
+        &mut self,
+        frame_length: usize,
+        time: f64,
+        inframe1: *const u32,
+        inframe2: *const u32,
+        _inframe3: *const u32,
+        outframe: &mut [u32],
+    ) {
+        self.update_mixer2(
+            time,
+            frame_to_slice(&inframe1, frame_length),
+            frame_to_slice(&inframe2, frame_length),
+            outframe,
+        );
+    }
+}
+
+impl<T> PluginKindType<KindMixer3> for T
+where
+    T: Mixer3Plugin,
+{
+    fn update(
+        &mut self,
+        frame_length: usize,
+        time: f64,
+        inframe1: *const u32,
+        inframe2: *const u32,
+        inframe3: *const u32,
+        outframe: &mut [u32],
+    ) {
+        self.update_mixer3(
+            time,
+            frame_to_slice(&inframe1, frame_length),
+            frame_to_slice(&inframe2, frame_length),
+            frame_to_slice(&inframe3, frame_length),
+            outframe,
+        );
+    }
+}
 
 #[doc(hidden)]
 pub fn f0r_init() -> c_int {
@@ -32,12 +163,7 @@ pub unsafe fn f0r_get_plugin_info<P: Plugin>(info: *mut f0r_plugin_info_t) {
 
     info.name = our_info.name.as_ptr();
     info.author = our_info.author.as_ptr();
-    info.plugin_type = match P::PLUGIN_TYPE {
-        PluginType::Filter => F0R_PLUGIN_TYPE_FILTER as i32,
-        PluginType::Source => F0R_PLUGIN_TYPE_SOURCE as i32,
-        PluginType::Mixer2 => F0R_PLUGIN_TYPE_MIXER2 as i32,
-        PluginType::Mixer3 => F0R_PLUGIN_TYPE_MIXER3 as i32,
-    };
+    info.plugin_type = P::Kind::PLUGIN_TYPE;
     info.color_model = match our_info.color_model {
         ColorModel::BGRA8888 => F0R_COLOR_MODEL_BGRA8888 as i32,
         ColorModel::RGBA8888 => F0R_COLOR_MODEL_RGBA8888 as i32,
@@ -196,26 +322,7 @@ fn frame_to_slice(frame: &*const u32, length: usize) -> &[u32] {
 }
 
 #[doc(hidden)]
-pub unsafe fn f0r_update<P: Plugin>(
-    instance: f0r_instance_t,
-    time: f64,
-    inframe: *const u32,
-    outframe: *mut u32,
-) {
-    unsafe {
-        f0r_update2::<P>(
-            instance,
-            time,
-            inframe,
-            std::ptr::null(),
-            std::ptr::null(),
-            outframe,
-        )
-    };
-}
-
-#[doc(hidden)]
-pub unsafe fn f0r_update2<P: Plugin>(
+pub unsafe fn f0r_update2<P: Plugin + PluginUpdate>(
     instance: f0r_instance_t,
     time: f64,
     inframe1: *const u32,
@@ -228,33 +335,12 @@ pub unsafe fn f0r_update2<P: Plugin>(
         panic!("unexpected null output frame");
     }
     let outframe = unsafe { std::slice::from_raw_parts_mut(outframe, instance.frame_length) };
-    match P::PLUGIN_TYPE {
-        PluginType::Source => {
-            instance.inner.source_update(time, outframe);
-        }
-        PluginType::Filter => {
-            instance.inner.filter_update(
-                time,
-                frame_to_slice(&inframe1, instance.frame_length),
-                outframe,
-            );
-        }
-        PluginType::Mixer2 => {
-            instance.inner.mixer2_update(
-                time,
-                frame_to_slice(&inframe1, instance.frame_length),
-                frame_to_slice(&inframe2, instance.frame_length),
-                outframe,
-            );
-        }
-        PluginType::Mixer3 => {
-            instance.inner.mixer3_update(
-                time,
-                frame_to_slice(&inframe1, instance.frame_length),
-                frame_to_slice(&inframe2, instance.frame_length),
-                frame_to_slice(&inframe3, instance.frame_length),
-                outframe,
-            );
-        }
-    }
+    instance.inner.update(
+        instance.frame_length,
+        time,
+        inframe1,
+        inframe2,
+        inframe3,
+        outframe,
+    );
 }

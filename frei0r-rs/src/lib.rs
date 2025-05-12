@@ -86,21 +86,6 @@ pub unsafe trait PluginBase {
     fn param_mut(&mut self, param_index: usize) -> ParamMut<'_>;
 }
 
-/// Type of the plugin.
-///
-/// These defines determine whether the plugin is a source, a filter or one of the two mixer types.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum PluginType {
-    /// One input and one output
-    Filter,
-    /// Just one output
-    Source,
-    /// Two inputs and one output
-    Mixer2,
-    /// Three inputs and one output
-    Mixer3,
-}
-
 /// List of supported color models.
 ///
 /// Note: the color models are endian independent, because the color components are defined by
@@ -165,7 +150,8 @@ pub struct PluginInfo {
     pub explanation: &'static CStr,
 }
 
-/// The plugin type.
+/// The plugin base trait. Plugins must also implement one of the
+/// [SourcePlugin], [FilterPlugin], [Mixer2Plugin] or [Mixer3Plugin] traits.
 ///
 /// The update functions are where the core effect processing happens. The application calls it after it has
 /// set the necessary parameter values.
@@ -173,8 +159,7 @@ pub struct PluginInfo {
 /// The function is responsible to restore the fpu state (e.g. rounding mode) and mmx state if
 /// applicable before it returns to the caller.
 pub trait Plugin: PluginBase {
-    /// The plugin type
-    const PLUGIN_TYPE: PluginType;
+    type Kind: PluginKind;
 
     /// Called by the application to query plugin information.
     fn info() -> PluginInfo;
@@ -186,41 +171,79 @@ pub trait Plugin: PluginBase {
     ///
     /// The plugin must set default values for all parameters in this function.
     fn new(width: usize, height: usize) -> Self;
+}
 
-    /// Must implement for effect of type [PluginType::Source]
-    fn source_update(&mut self, _time: f64, _outframe: &mut [u32]) {
-        unimplemented!("This plugin must implement source_update");
-    }
+pub use ffi::{KindFilter, KindMixer2, KindMixer3, KindSource};
 
-    /// Must implement for effect of type [PluginType::Filter]
-    fn filter_update(&mut self, _time: f64, _inframe: &[u32], _outframe: &mut [u32]) {
-        unimplemented!("This plugin must implement filter_update");
-    }
+pub trait SourcePlugin: Plugin<Kind = KindSource> {
+    fn update_source(&mut self, time: f64, outframe: &mut [u32]);
+}
 
-    /// Must implement for effect of type [PluginType::Mixer2]
-    fn mixer2_update(
+pub trait FilterPlugin: Plugin<Kind = KindFilter> {
+    fn update_filter(&mut self, time: f64, inframe: &[u32], outframe: &mut [u32]);
+}
+
+pub trait Mixer2Plugin: Plugin<Kind = KindMixer2> {
+    fn update_mixer2(
         &mut self,
-        _time: f64,
-        _inframe1: &[u32],
-        _inframe2: &[u32],
-        _outframe: &mut [u32],
-    ) {
-        unimplemented!("This plugin must implement mixer2_update");
-    }
+        time: f64,
+        inframe1: &[u32],
+        inframe2: &[u32],
+        outframe: &mut [u32],
+    );
+}
 
-    /// Must implement for effect of type [PluginType::Mixer3]
-    fn mixer3_update(
+pub trait Mixer3Plugin: Plugin<Kind = KindMixer3> {
+    fn update_mixer3(
         &mut self,
-        _time: f64,
-        _inframe1: &[u32],
-        _inframe2: &[u32],
-        _inframe3: &[u32],
-        _outframe: &mut [u32],
+        time: f64,
+        inframe1: &[u32],
+        inframe2: &[u32],
+        inframe3: &[u32],
+        outframe: &mut [u32],
+    );
+}
+
+pub trait PluginUpdate {
+    fn update(
+        &mut self,
+        frame_length: usize,
+        time: f64,
+        inframe1: *const u32,
+        inframe2: *const u32,
+        inframe3: *const u32,
+        outframe: &mut [u32],
+    );
+}
+
+impl<T> PluginUpdate for T
+where
+    T: Plugin,
+    T: PluginKindType<T::Kind>,
+{
+    fn update(
+        &mut self,
+        frame_length: usize,
+        time: f64,
+        inframe1: *const u32,
+        inframe2: *const u32,
+        inframe3: *const u32,
+        outframe: &mut [u32],
     ) {
-        unimplemented!("This plugin must implement mixer3_update");
+        <T as PluginKindType<T::Kind>>::update(
+            self,
+            frame_length,
+            time,
+            inframe1,
+            inframe2,
+            inframe3,
+            outframe,
+        );
     }
 }
 
+use ffi::PluginKind;
+use ffi::PluginKindType;
 pub use frei0r_macros::PluginBase;
 
 /// Helper trait used in the implmenetation of derive macro [PluginBase](frei0r_macros::PluginBase). **DO NOT** use directly.
@@ -354,7 +377,16 @@ macro_rules! plugin {
             inframe: *const u32,
             outframe: *mut u32,
         ) {
-            unsafe { ffi::f0r_update::<$type>(instance, time, inframe, outframe) }
+            unsafe {
+                ffi::f0r_update2::<$type>(
+                    instance,
+                    time,
+                    inframe,
+                    std::ptr::null(),
+                    std::ptr::null(),
+                    outframe,
+                )
+            }
         }
         #[unsafe(no_mangle)]
         pub unsafe extern "C" fn f0r_update2(

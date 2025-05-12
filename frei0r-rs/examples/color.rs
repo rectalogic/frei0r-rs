@@ -9,7 +9,7 @@ pub struct ColorPlugin {
 }
 
 impl Plugin for ColorPlugin {
-    const PLUGIN_TYPE: PluginType = PluginType::Source;
+    type Kind = KindSource;
 
     fn info() -> PluginInfo {
         PluginInfo {
@@ -33,8 +33,10 @@ impl Plugin for ColorPlugin {
             height,
         }
     }
+}
 
-    fn source_update(&mut self, _time: f64, outframe: &mut [u32]) {
+impl SourcePlugin for ColorPlugin {
+    fn update_source(&mut self, _time: f64, outframe: &mut [u32]) {
         let r_u8 = (self.color.r * 255.0) as u8;
         let g_u8 = (self.color.g * 255.0) as u8;
         let b_u8 = (self.color.b * 255.0) as u8;
