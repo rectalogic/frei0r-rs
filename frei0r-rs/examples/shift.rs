@@ -11,7 +11,7 @@ pub struct ShiftPlugin {
 }
 
 impl Plugin for ShiftPlugin {
-    const PLUGIN_TYPE: PluginType = PluginType::Filter;
+    type Kind = KindFilter;
 
     fn info() -> PluginInfo {
         PluginInfo {
@@ -32,8 +32,10 @@ impl Plugin for ShiftPlugin {
             height,
         }
     }
+}
 
-    fn filter_update(&mut self, _time: f64, inframe: &[u32], outframe: &mut [u32]) {
+impl FilterPlugin for ShiftPlugin {
+    fn update_filter(&mut self, _time: f64, inframe: &[u32], outframe: &mut [u32]) {
         let xshift = (self.xshift * self.width as f64) as usize;
         let yshift = (self.yshift * self.height as f64) as usize;
         for dy in 0..self.height {
