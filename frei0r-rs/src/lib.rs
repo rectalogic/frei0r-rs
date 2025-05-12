@@ -242,7 +242,7 @@ where
     }
 }
 
-use ffi::PluginKind;
+pub use ffi::PluginKind;
 use ffi::PluginKindType;
 pub use frei0r_macros::PluginBase;
 
