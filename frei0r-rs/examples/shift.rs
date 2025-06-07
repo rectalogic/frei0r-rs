@@ -6,7 +6,7 @@ struct Extra;
 pub struct TestPlugin {
     #[frei0r(explain = c"Shift in x direction")] xshift : f64,
     #[frei0r(explain = c"Shift in y direction")] yshift : f64,
-    #[internal] extra: Extra,
+    #[frei0r(skip)] extra: Extra,
 }
 
 impl Plugin for TestPlugin {

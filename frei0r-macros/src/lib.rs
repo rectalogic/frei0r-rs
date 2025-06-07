@@ -20,34 +20,67 @@ struct FieldInfo {
 
 impl FieldInfo {
     fn new(field : Field) -> Result<Option<Self>> {
+        let mut skip = false;
         let mut rename = None;
         let mut explain = None;
         for attr in field.attrs {
-            if attr.path().is_ident("internal") {
-                return Ok(None);
-            }
-            else if attr.path().is_ident("frei0r") {
-                let name_values: Punctuated<MetaNameValue, Token![,]> = attr.parse_args_with(Punctuated::parse_terminated)?;
-                for name_value in name_values {
-                    let ident = name_value.path.require_ident()?;
-                    match ident {
-                        ident if ident == "rename" => {
-                            rename = match rename {
-                                Some(_) => Err(Error::new_spanned(name_value, "attempting to set rename attribute more than once"))?,
-                                None => Some(name_value.value),
-                            };
+            if attr.path().is_ident("frei0r") {
+                let metas: Punctuated<Meta, Token![,]> = attr.parse_args_with(Punctuated::parse_terminated)?;
+                for meta in metas {
+                    match meta {
+                        Meta::Path(path) => {
+                            let ident = path.require_ident()?;
+                            match ident {
+                                ident if ident == "skip" => {
+                                    if rename.is_some() || explain.is_some() {
+                                        return Err(Error::new_spanned(path, "skip attribute cannot be specified with other attribute"));
+                                    }
+
+                                    if skip {
+                                        return Err(Error::new_spanned(path, "attempting to set skip attribute more than once"));
+                                    } else {
+                                        skip = true;
+                                    }
+                                },
+                                _ => Err(Error::new_spanned(path, "unknown attribute"))?,
+                            }
                         },
-                        ident if ident == "explain" => {
-                            explain = match explain {
-                                Some(_) => Err(Error::new_spanned(name_value, "attempting to set explain attribute more than once"))?,
-                                None => Some(name_value.value),
-                            };
+                        Meta::NameValue(meta_name_value) => {
+                            let ident = meta_name_value.path.require_ident()?;
+                            match ident {
+                                ident if ident == "rename" => {
+                                    if skip {
+                                        return Err(Error::new_spanned(meta_name_value, "skip attribute cannot be specified with other attribute"));
+                                    }
+
+                                    rename = match rename {
+                                        Some(_) => Err(Error::new_spanned(meta_name_value, "attempting to set rename attribute more than once"))?,
+                                        None => Some(meta_name_value.value),
+                                    };
+                                },
+                                ident if ident == "explain" => {
+                                    if skip {
+                                        return Err(Error::new_spanned(meta_name_value, "skip attribute cannot be specified with other attribute"));
+                                    }
+
+                                    explain = match explain {
+                                        Some(_) => Err(Error::new_spanned(meta_name_value, "attempting to set explain attribute more than once"))?,
+                                        None => Some(meta_name_value.value),
+                                    };
+                                },
+                                _ => Err(Error::new_spanned(meta_name_value, "unknown attribute"))?,
+                            }
                         },
-                        _ => Err(Error::new_spanned(name_value, "unknown attribute"))?,
+                        Meta::List(meta_list) => Err(Error::new_spanned(meta_list, "unknown attribute"))?,
                     }
                 }
             }
         }
+
+        if skip {
+            return Ok(None);
+        }
+
         Ok(Some(Self {
             ident : field.ident.unwrap(),
             ty : field.ty,
@@ -90,7 +123,7 @@ impl DeriveInputInfo {
 }
 
 /// Derive macro used in the implementation of [PluginBase](../frei0r_rs/trait.PluginBase.html) trait.
-#[proc_macro_derive(PluginBase, attributes(frei0r, internal))]
+#[proc_macro_derive(PluginBase, attributes(frei0r))]
 pub fn derive_plugin_base(input : TokenStream) -> TokenStream {
     DeriveInputInfo::new(parse_macro_input!(input as DeriveInput))
         .map(|info| {
