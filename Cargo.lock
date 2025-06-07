@@ -71,7 +71,7 @@ checksum = "48c757948c5ede0e46177b7add2e67155f70e33c07fea8284df6576da70b3719"
 
 [[package]]
 name = "frei0r-macros"
-version = "1.0.0"
+version = "1.0.1"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -80,7 +80,7 @@ dependencies = [
 
 [[package]]
 name = "frei0r-rs"
-version = "1.0.0"
+version = "1.0.1"
 dependencies = [
  "frei0r-macros",
  "frei0r-sys",
@@ -88,7 +88,7 @@ dependencies = [
 
 [[package]]
 name = "frei0r-sys"
-version = "1.0.0"
+version = "1.0.1"
 dependencies = [
  "bindgen",
 ]
