@@ -1,6 +1,5 @@
 use crate::ColorModel;
 use crate::Plugin;
-use crate::PluginUpdate;
 use crate::{FilterPlugin, Mixer2Plugin, Mixer3Plugin, SourcePlugin};
 use crate::{ParamKind, ParamMut, ParamRef};
 
@@ -318,6 +317,44 @@ fn frame_to_slice(frame: &*const u32, length: usize) -> &[u32] {
         panic!("Unexpected null frame");
     } else {
         unsafe { std::slice::from_raw_parts(*frame, length) }
+    }
+}
+
+pub trait PluginUpdate {
+    fn update(
+        &mut self,
+        frame_length: usize,
+        time: f64,
+        inframe1: *const u32,
+        inframe2: *const u32,
+        inframe3: *const u32,
+        outframe: &mut [u32],
+    );
+}
+
+impl<T> PluginUpdate for T
+where
+    T: Plugin,
+    T: PluginKindType<T::Kind>,
+{
+    fn update(
+        &mut self,
+        frame_length: usize,
+        time: f64,
+        inframe1: *const u32,
+        inframe2: *const u32,
+        inframe3: *const u32,
+        outframe: &mut [u32],
+    ) {
+        <T as PluginKindType<T::Kind>>::update(
+            self,
+            frame_length,
+            time,
+            inframe1,
+            inframe2,
+            inframe3,
+            outframe,
+        );
     }
 }
 

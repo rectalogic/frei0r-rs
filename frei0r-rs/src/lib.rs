@@ -151,7 +151,8 @@ pub struct PluginInfo {
 }
 
 /// The plugin base trait. Plugins must also implement one of the
-/// [SourcePlugin], [FilterPlugin], [Mixer2Plugin] or [Mixer3Plugin] traits.
+/// [SourcePlugin], [FilterPlugin], [Mixer2Plugin] or [Mixer3Plugin] traits
+/// corresponding to the [PluginKind] associated type.
 ///
 /// The update functions are where the core effect processing happens. The application calls it after it has
 /// set the necessary parameter values.
@@ -204,46 +205,7 @@ pub trait Mixer3Plugin: Plugin<Kind = KindMixer3> {
     );
 }
 
-pub trait PluginUpdate {
-    fn update(
-        &mut self,
-        frame_length: usize,
-        time: f64,
-        inframe1: *const u32,
-        inframe2: *const u32,
-        inframe3: *const u32,
-        outframe: &mut [u32],
-    );
-}
-
-impl<T> PluginUpdate for T
-where
-    T: Plugin,
-    T: PluginKindType<T::Kind>,
-{
-    fn update(
-        &mut self,
-        frame_length: usize,
-        time: f64,
-        inframe1: *const u32,
-        inframe2: *const u32,
-        inframe3: *const u32,
-        outframe: &mut [u32],
-    ) {
-        <T as PluginKindType<T::Kind>>::update(
-            self,
-            frame_length,
-            time,
-            inframe1,
-            inframe2,
-            inframe3,
-            outframe,
-        );
-    }
-}
-
 pub use ffi::PluginKind;
-use ffi::PluginKindType;
 pub use frei0r_macros::PluginBase;
 
 /// Helper trait used in the implmenetation of derive macro [PluginBase](frei0r_macros::PluginBase). **DO NOT** use directly.
