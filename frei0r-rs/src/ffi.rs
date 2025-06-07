@@ -56,7 +56,14 @@ impl PluginKind for KindMixer3 {
     const PLUGIN_TYPE: i32 = F0R_PLUGIN_TYPE_MIXER3 as i32;
 }
 
-pub trait PluginKindType<K: PluginKind> {
+// Bridges between type-level plugin kinds and runtime update behavior.
+//
+// This trait is parameterized by PluginKind `K` to avoid implementation conflicts
+// while providing a uniform `update` signature for the FFI layer. Each plugin type
+// (Source, Filter, Mixer2, Mixer3) has different update method signatures,
+// this trait dispatches to the appropriate plugin-specific method based on
+// the PluginKind type parameter `K`.
+pub trait PluginKindUpdate<K: PluginKind> {
     fn update(
         &mut self,
         frame_length: usize,
@@ -68,7 +75,7 @@ pub trait PluginKindType<K: PluginKind> {
     );
 }
 
-impl<T> PluginKindType<KindSource> for T
+impl<T> PluginKindUpdate<KindSource> for T
 where
     T: SourcePlugin,
 {
@@ -85,7 +92,7 @@ where
     }
 }
 
-impl<T> PluginKindType<KindFilter> for T
+impl<T> PluginKindUpdate<KindFilter> for T
 where
     T: FilterPlugin,
 {
@@ -102,7 +109,7 @@ where
     }
 }
 
-impl<T> PluginKindType<KindMixer2> for T
+impl<T> PluginKindUpdate<KindMixer2> for T
 where
     T: Mixer2Plugin,
 {
@@ -124,7 +131,7 @@ where
     }
 }
 
-impl<T> PluginKindType<KindMixer3> for T
+impl<T> PluginKindUpdate<KindMixer3> for T
 where
     T: Mixer3Plugin,
 {
@@ -335,7 +342,7 @@ pub trait PluginUpdate {
 impl<T> PluginUpdate for T
 where
     T: Plugin,
-    T: PluginKindType<T::Kind>,
+    T: PluginKindUpdate<T::Kind>,
 {
     fn update(
         &mut self,
@@ -346,7 +353,7 @@ where
         inframe3: *const u32,
         outframe: &mut [u32],
     ) {
-        <T as PluginKindType<T::Kind>>::update(
+        <T as PluginKindUpdate<T::Kind>>::update(
             self,
             frame_length,
             time,
