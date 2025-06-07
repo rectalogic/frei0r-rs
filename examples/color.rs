@@ -1,8 +1,6 @@
-use frei0r_rs::*;
+use frei0r_rs2::*;
 
-#[derive(PluginBase)]
 pub struct ColorPlugin {
-    #[frei0r(explain = c"Color to generate")]
     color: Color,
     width: usize,
     height: usize,
@@ -11,14 +9,21 @@ pub struct ColorPlugin {
 impl Plugin for ColorPlugin {
     type Kind = KindSource;
 
+    const PARAMS: &'static [ParamInfo<Self>] = &[ParamInfo::new_color(
+        c"color",
+        c"Color to generate",
+        |plugin| &plugin.color,
+        |plugin, value| plugin.color = *value,
+    )];
+
     fn info() -> PluginInfo {
         PluginInfo {
-            name: c"frei0r-rs color",
+            name: c"frei0r-rs2 color",
             author: c"none",
             color_model: ColorModel::RGBA8888,
             major_version: 1,
             minor_version: 0,
-            explanation: c"Source plugin used for the testing of frei0r-rs",
+            explanation: Some(c"Source plugin used for the testing of frei0r-rs2"),
         }
     }
 
@@ -26,8 +31,8 @@ impl Plugin for ColorPlugin {
         Self {
             color: Color {
                 r: 1.0,
-                g: 0.0,
-                b: 0.0,
+                g: 1.0,
+                b: 1.0,
             },
             width,
             height,

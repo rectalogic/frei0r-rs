@@ -1,90 +1,13 @@
-#![allow(clippy::too_many_arguments)]
-
 //! Rust binding for the implementation of fri0r plugin API <https://frei0r.dyne.org/>.
 //!
 //! See example for API usage.
 
 #[doc(hidden)]
 pub mod ffi;
-
+mod param;
+pub use ffi::{KindFilter, KindMixer2, KindMixer3, KindSource, PluginKind};
+pub use param::{Color, ParamInfo, ParamKind, Position};
 use std::ffi::CStr;
-use std::ffi::CString;
-
-/// Color parameter.
-///
-/// All components are in the range [0, 1].
-#[derive(Debug, Clone, Copy)]
-pub struct Color {
-    /// Red component.
-    pub r: f32,
-    /// Green component.
-    pub g: f32,
-    /// Blue component.
-    pub b: f32,
-}
-
-/// Position parameter.
-///
-/// All coordinates are in the range [0, 1].
-#[derive(Debug, Clone, Copy)]
-pub struct Position {
-    pub x: f64,
-    pub y: f64,
-}
-
-/// Type of a parameter.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum ParamKind {
-    Bool,
-    Double,
-    Color,
-    Position,
-    String,
-}
-
-/// Information of a parameter.
-#[derive(Debug, Clone, Copy)]
-pub struct ParamInfo {
-    pub name: &'static CStr,
-    pub kind: ParamKind,
-    pub explanation: &'static CStr,
-}
-
-/// Reference to a parameter.
-#[derive(Debug, Clone, Copy)]
-pub enum ParamRef<'a> {
-    Bool(&'a bool),
-    Double(&'a f64),
-    Color(&'a Color),
-    Position(&'a Position),
-    String(&'a CString),
-}
-
-/// Mutable reference to a parameter.
-#[derive(Debug)]
-pub enum ParamMut<'a> {
-    Bool(&'a mut bool),
-    Double(&'a mut f64),
-    Color(&'a mut Color),
-    Position(&'a mut Position),
-    String(&'a mut CString),
-}
-
-/// Base trait of [Plugin] which is responsible for setting/getting of plugin parameters.
-///
-/// **AVOID** implementing it directly. Use the derive macro [PluginBase](frei0r_macros::PluginBase) instead.
-///
-/// # Safety
-///
-/// Implementers must verify that the parameter type returned by [PluginBase::param_info],
-/// [PluginBase::param_ref] and [PluginBase::param_mut] agrees with each other.
-pub unsafe trait PluginBase {
-    fn param_count() -> usize;
-    fn param_info(index: usize) -> ParamInfo;
-
-    fn param_ref(&self, param_index: usize) -> ParamRef<'_>;
-    fn param_mut(&mut self, param_index: usize) -> ParamMut<'_>;
-}
 
 /// List of supported color models.
 ///
@@ -147,7 +70,7 @@ pub struct PluginInfo {
     /// The minor version of the plugin
     pub minor_version: i32,
     /// An optional explanation string
-    pub explanation: &'static CStr,
+    pub explanation: Option<&'static CStr>,
 }
 
 /// The plugin base trait. Plugins must also implement one of the
@@ -159,8 +82,11 @@ pub struct PluginInfo {
 ///
 /// The function is responsible to restore the fpu state (e.g. rounding mode) and mmx state if
 /// applicable before it returns to the caller.
-pub trait Plugin: PluginBase {
+pub trait Plugin: 'static + Sized {
     type Kind: PluginKind;
+
+    /// The list of plugin parameters
+    const PARAMS: &'static [ParamInfo<Self>];
 
     /// Called by the application to query plugin information.
     fn info() -> PluginInfo;
@@ -174,16 +100,17 @@ pub trait Plugin: PluginBase {
     fn new(width: usize, height: usize) -> Self;
 }
 
-pub use ffi::{KindFilter, KindMixer2, KindMixer3, KindSource};
-
+/// A source plugin, must be implemented if Plugin::Kind = KindSource
 pub trait SourcePlugin: Plugin<Kind = KindSource> {
     fn update_source(&mut self, time: f64, outframe: &mut [u32]);
 }
 
+/// A filter plugin, must be implemented if Plugin::Kind = KindFilter
 pub trait FilterPlugin: Plugin<Kind = KindFilter> {
     fn update_filter(&mut self, time: f64, inframe: &[u32], outframe: &mut [u32]);
 }
 
+/// A mixer2 plugin, must be implemented if Plugin::Kind = KindMixer2
 pub trait Mixer2Plugin: Plugin<Kind = KindMixer2> {
     fn update_mixer2(
         &mut self,
@@ -194,6 +121,7 @@ pub trait Mixer2Plugin: Plugin<Kind = KindMixer2> {
     );
 }
 
+/// A mixer3 plugin, must be implemented if Plugin::Kind = KindMixer3
 pub trait Mixer3Plugin: Plugin<Kind = KindMixer3> {
     fn update_mixer3(
         &mut self,
@@ -205,93 +133,18 @@ pub trait Mixer3Plugin: Plugin<Kind = KindMixer3> {
     );
 }
 
-pub use ffi::PluginKind;
-pub use frei0r_macros::PluginBase;
-
-/// Helper trait used in the implmenetation of derive macro [PluginBase](frei0r_macros::PluginBase). **DO NOT** use directly.
-///
-/// # Safety
-///
-/// Implementers must verify that the parameter type returned by [Param::kind], [Param::as_ref] and
-/// [Param::as_mut] agrees with each other.
-pub unsafe trait Param {
-    fn kind() -> ParamKind;
-    fn as_ref(&self) -> ParamRef<'_>;
-    fn as_mut(&mut self) -> ParamMut<'_>;
-}
-
-unsafe impl Param for bool {
-    fn kind() -> ParamKind {
-        ParamKind::Bool
-    }
-    fn as_ref(&self) -> ParamRef<'_> {
-        ParamRef::Bool(self)
-    }
-    fn as_mut(&mut self) -> ParamMut<'_> {
-        ParamMut::Bool(self)
-    }
-}
-
-unsafe impl Param for f64 {
-    fn kind() -> ParamKind {
-        ParamKind::Double
-    }
-    fn as_ref(&self) -> ParamRef<'_> {
-        ParamRef::Double(self)
-    }
-    fn as_mut(&mut self) -> ParamMut<'_> {
-        ParamMut::Double(self)
-    }
-}
-
-unsafe impl Param for Color {
-    fn kind() -> ParamKind {
-        ParamKind::Color
-    }
-    fn as_ref(&self) -> ParamRef<'_> {
-        ParamRef::Color(self)
-    }
-    fn as_mut(&mut self) -> ParamMut<'_> {
-        ParamMut::Color(self)
-    }
-}
-
-unsafe impl Param for Position {
-    fn kind() -> ParamKind {
-        ParamKind::Position
-    }
-    fn as_ref(&self) -> ParamRef<'_> {
-        ParamRef::Position(self)
-    }
-    fn as_mut(&mut self) -> ParamMut<'_> {
-        ParamMut::Position(self)
-    }
-}
-
-unsafe impl Param for CString {
-    fn kind() -> ParamKind {
-        ParamKind::String
-    }
-    fn as_ref(&self) -> ParamRef<'_> {
-        ParamRef::String(self)
-    }
-    fn as_mut(&mut self) -> ParamMut<'_> {
-        ParamMut::String(self)
-    }
-}
-
 /// Export necessary C bindings for frei0r plugin.
 #[macro_export]
 macro_rules! plugin {
     ($type:ty) => {
-        use frei0r_rs::ffi;
+        use frei0r_rs2::ffi;
 
         #[unsafe(no_mangle)]
-        pub unsafe extern "C" fn f0r_init() -> ffi::c_int {
+        pub extern "C" fn f0r_init() -> ffi::c_int {
             ffi::f0r_init()
         }
         #[unsafe(no_mangle)]
-        pub unsafe extern "C" fn f0r_deinit() {
+        pub extern "C" fn f0r_deinit() {
             ffi::f0r_deinit()
         }
         #[unsafe(no_mangle)]
@@ -306,31 +159,31 @@ macro_rules! plugin {
             unsafe { ffi::f0r_get_param_info::<$type>(info, param_index) }
         }
         #[unsafe(no_mangle)]
-        pub unsafe extern "C" fn f0r_construct(
+        pub extern "C" fn f0r_construct(
             width: ffi::c_uint,
             height: ffi::c_uint,
         ) -> ffi::f0r_instance_t {
             ffi::f0r_construct::<$type>(width, height)
         }
         #[unsafe(no_mangle)]
-        pub unsafe extern "C" fn f0r_destruct(instance: ffi::f0r_instance_t) {
-            unsafe { ffi::f0r_destruct::<$type>(instance) }
+        pub extern "C" fn f0r_destruct(instance: ffi::f0r_instance_t) {
+            ffi::f0r_destruct::<$type>(instance)
         }
         #[unsafe(no_mangle)]
-        pub unsafe extern "C" fn f0r_set_param_value(
+        pub extern "C" fn f0r_set_param_value(
             instance: ffi::f0r_instance_t,
             param: ffi::f0r_param_t,
             param_index: ffi::c_int,
         ) {
-            unsafe { ffi::f0r_set_param_value::<$type>(instance, param, param_index) }
+            ffi::f0r_set_param_value::<$type>(instance, param, param_index)
         }
         #[unsafe(no_mangle)]
-        pub unsafe extern "C" fn f0r_get_param_value(
+        pub extern "C" fn f0r_get_param_value(
             instance: ffi::f0r_instance_t,
             param: ffi::f0r_param_t,
             param_index: ffi::c_int,
         ) {
-            unsafe { ffi::f0r_get_param_value::<$type>(instance, param, param_index) }
+            ffi::f0r_get_param_value::<$type>(instance, param, param_index)
         }
         #[unsafe(no_mangle)]
         pub unsafe extern "C" fn f0r_update(

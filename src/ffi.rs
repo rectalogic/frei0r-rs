@@ -1,19 +1,7 @@
-use crate::ColorModel;
-use crate::Plugin;
-use crate::{FilterPlugin, Mixer2Plugin, Mixer3Plugin, SourcePlugin};
-use crate::{ParamKind, ParamMut, ParamRef};
-
-pub use frei0r_sys::f0r_instance_t;
-pub use frei0r_sys::f0r_param_info_t;
-pub use frei0r_sys::f0r_param_t;
-pub use frei0r_sys::f0r_plugin_info_t;
-
-pub use std::ffi::c_int;
-pub use std::ffi::c_uint;
-pub use std::ffi::c_void;
-
-use frei0r_sys::*;
-use std::ffi::CStr;
+use crate::param::{Color, ParamInfo, ParamKind, Position};
+use crate::{ColorModel, FilterPlugin, Mixer2Plugin, Mixer3Plugin, Plugin, SourcePlugin};
+pub use frei0r_sys::*;
+pub use std::ffi::{CStr, c_int, c_uint};
 
 mod private {
     pub trait Sealed {}
@@ -178,26 +166,28 @@ pub unsafe fn f0r_get_plugin_info<P: Plugin>(info: *mut f0r_plugin_info_t) {
     info.frei0r_version = FREI0R_MAJOR_VERSION as i32;
     info.major_version = our_info.major_version;
     info.minor_version = our_info.minor_version;
-    info.num_params = P::param_count().try_into().unwrap();
-    info.explanation = our_info.explanation.as_ptr();
+    info.num_params = P::PARAMS.len() as i32;
+    if let Some(explanation) = our_info.explanation {
+        info.explanation = explanation.as_ptr();
+    }
 }
 
 #[doc(hidden)]
 pub unsafe fn f0r_get_param_info<P: Plugin>(info: *mut f0r_param_info_t, param_index: c_int) {
-    let param_index = param_index.try_into().unwrap();
+    let param_index = param_index as usize;
 
     let info = unsafe { &mut *info };
-    let our_info = P::param_info(param_index);
+    let our_info: &ParamInfo<P> = &P::PARAMS[param_index];
 
-    info.name = our_info.name.as_ptr();
-    info.type_ = match our_info.kind {
-        ParamKind::Bool => F0R_PARAM_BOOL as i32,
-        ParamKind::Double => F0R_PARAM_DOUBLE as i32,
-        ParamKind::Color => F0R_PARAM_COLOR as i32,
-        ParamKind::Position => F0R_PARAM_POSITION as i32,
-        ParamKind::String => F0R_PARAM_STRING as i32,
+    info.name = our_info.name().as_ptr();
+    info.type_ = match our_info.kind() {
+        ParamKind::Bool { .. } => F0R_PARAM_BOOL as i32,
+        ParamKind::Double { .. } => F0R_PARAM_DOUBLE as i32,
+        ParamKind::Color { .. } => F0R_PARAM_COLOR as i32,
+        ParamKind::Position { .. } => F0R_PARAM_POSITION as i32,
+        ParamKind::String { .. } => F0R_PARAM_STRING as i32,
     };
-    info.explanation = our_info.explanation.as_ptr();
+    info.explanation = our_info.explanation().as_ptr();
 }
 
 pub struct Instance<P: Plugin> {
@@ -218,103 +208,96 @@ pub fn f0r_construct<P: Plugin>(width: c_uint, height: c_uint) -> f0r_instance_t
 }
 
 #[doc(hidden)]
-pub unsafe fn f0r_destruct<P: Plugin>(instance: f0r_instance_t) {
+pub fn f0r_destruct<P: Plugin>(instance: f0r_instance_t) {
     let instance = unsafe { Box::from_raw(instance as *mut Instance<P>) };
     drop(instance)
 }
 
 #[doc(hidden)]
-pub unsafe fn f0r_set_param_value<P: Plugin>(
+pub fn f0r_set_param_value<P: Plugin>(
     instance: f0r_instance_t,
     param: f0r_param_t,
     param_index: c_int,
 ) {
-    let param_index = param_index.try_into().unwrap();
+    let param_index = param_index as usize;
 
     let instance = unsafe { &mut *(instance as *mut Instance<P>) };
-    match instance.inner.param_mut(param_index) {
-        ParamMut::Bool(value) => {
-            assert!(P::param_info(param_index).kind == ParamKind::Bool);
-
+    let param_info: &ParamInfo<P> = &P::PARAMS[param_index];
+    let kind = param_info.kind();
+    match kind {
+        ParamKind::Bool { set, .. } => {
             let param = unsafe { *(param as *const f0r_param_bool) };
-            *value = param >= 0.5;
+            set(&mut instance.inner, param >= 0.5);
         }
-        ParamMut::Double(value) => {
-            assert!(P::param_info(param_index).kind == ParamKind::Double);
-
+        ParamKind::Double { set, .. } => {
             let param = unsafe { *(param as *const f0r_param_double) };
-            *value = param;
+            set(&mut instance.inner, param);
         }
-        ParamMut::Color(value) => {
-            assert!(P::param_info(param_index).kind == ParamKind::Color);
-
+        ParamKind::Color { set, .. } => {
             let param = unsafe { *(param as *const f0r_param_color) };
-            value.r = param.r;
-            value.g = param.g;
-            value.b = param.b;
+            let color = Color {
+                r: param.r,
+                g: param.g,
+                b: param.b,
+            };
+            set(&mut instance.inner, &color);
         }
-        ParamMut::Position(value) => {
-            assert!(P::param_info(param_index).kind == ParamKind::Position);
-
+        ParamKind::Position { set, .. } => {
             let param = unsafe { *(param as *const f0r_param_position) };
-            value.x = param.x;
-            value.y = param.y;
+            let position = Position {
+                x: param.x,
+                y: param.y,
+            };
+            set(&mut instance.inner, &position);
         }
-        ParamMut::String(value) => {
-            assert!(P::param_info(param_index).kind == ParamKind::String);
-
+        ParamKind::String { set, .. } => {
             let param = unsafe { *(param as *const f0r_param_string) };
-            *value = unsafe { CStr::from_ptr(param) }.to_owned();
+            let string = unsafe { CStr::from_ptr(param) };
+            set(&mut instance.inner, string);
         }
     };
 }
 
 #[doc(hidden)]
-pub unsafe fn f0r_get_param_value<P: Plugin>(
+pub fn f0r_get_param_value<P: Plugin>(
     instance: f0r_instance_t,
     param: f0r_param_t,
     param_index: c_int,
 ) {
-    let param_index = param_index.try_into().unwrap();
+    let param_index = param_index as usize;
 
     let instance = unsafe { &mut *(instance as *mut Instance<P>) };
-    match instance.inner.param_ref(param_index) {
-        ParamRef::Bool(value) => {
-            assert!(P::param_info(param_index).kind == ParamKind::Bool);
-
+    let param_info: &ParamInfo<P> = &P::PARAMS[param_index];
+    let kind = param_info.kind();
+    match kind {
+        ParamKind::Bool { get, .. } => {
             let param = unsafe { &mut *(param as *mut f0r_param_bool) };
-            *param = if *value { 1.0 } else { 0.0 };
+            *param = if get(&instance.inner) { 1.0 } else { 0.0 };
         }
-        ParamRef::Double(value) => {
-            assert!(P::param_info(param_index).kind == ParamKind::Double);
-
+        ParamKind::Double { get, .. } => {
             let param = unsafe { &mut *(param as *mut f0r_param_double) };
-            *param = *value;
+            *param = get(&instance.inner);
         }
-        ParamRef::Color(value) => {
-            assert!(P::param_info(param_index).kind == ParamKind::Color);
-
+        ParamKind::Color { get, .. } => {
             let param = unsafe { &mut *(param as *mut f0r_param_color) };
-            param.r = value.r;
-            param.g = value.g;
-            param.b = value.b;
+            let color = get(&instance.inner);
+            param.r = color.r;
+            param.g = color.g;
+            param.b = color.b;
         }
-        ParamRef::Position(value) => {
-            assert!(P::param_info(param_index).kind == ParamKind::Position);
-
+        ParamKind::Position { get, .. } => {
             let param = unsafe { &mut *(param as *mut f0r_param_position) };
-            param.x = value.x;
-            param.y = value.y;
+            let position = get(&instance.inner);
+            param.x = position.x;
+            param.y = position.y;
         }
-        ParamRef::String(value) => {
-            assert!(P::param_info(param_index).kind == ParamKind::String);
-
+        ParamKind::String { get, .. } => {
             let param = unsafe { &mut *(param as *mut f0r_param_string) };
             // We are casting away constness here. This should be fine since quoting the
             // comment found in the original header, "If the caller needs to modify the
             // value, it should make a copy of it and modify before calling
             // f0r_set_param_value()."
-            *param = value.as_ptr() as f0r_param_string;
+            *param = get(&instance.inner).as_ptr() as f0r_param_string;
         }
     };
 }

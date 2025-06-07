@@ -1,8 +1,19 @@
-[workspace]
-resolver = "2"
-members = ["frei0r-rs", "frei0r-sys", "frei0r-macros"]
-
-[workspace.package]
-version = "1.0.1"
+[package]
+name = "frei0r-rs2"
+version = "2.0.0"
 edition = "2024"
 license = "MIT"
+repository = "https://github.com/rectalogic/frei0r-rs"
+description = "Rust bindings to the frei0r plugin API, fork of frei0r-rs"
+
+[[example]]
+name = "shift"
+crate-type = ["cdylib"]
+
+[[example]]
+name = "color"
+crate-type = ["cdylib"]
+
+[dependencies]
+frei0r-sys = "0.1"
+paste = "1.0"

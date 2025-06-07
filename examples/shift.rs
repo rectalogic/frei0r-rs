@@ -1,10 +1,7 @@
-use frei0r_rs::*;
+use frei0r_rs2::*;
 
-#[derive(PluginBase)]
 pub struct ShiftPlugin {
-    #[frei0r(explain = c"Shift in x direction")]
     xshift: f64,
-    #[frei0r(explain = c"Shift in y direction")]
     yshift: f64,
     width: usize,
     height: usize,
@@ -13,14 +10,29 @@ pub struct ShiftPlugin {
 impl Plugin for ShiftPlugin {
     type Kind = KindFilter;
 
+    const PARAMS: &'static [ParamInfo<Self>] = &[
+        ParamInfo::new_double(
+            c"xshift",
+            c"Shift in x direction",
+            |plugin| plugin.xshift,
+            |plugin, value| plugin.xshift = value,
+        ),
+        ParamInfo::new_double(
+            c"yshift",
+            c"Shift in y direction",
+            |plugin| plugin.yshift,
+            |plugin, value| plugin.yshift = value,
+        ),
+    ];
+
     fn info() -> PluginInfo {
         PluginInfo {
-            name: c"frei0r-rs shift",
+            name: c"frei0r-rs2 shift",
             author: c"none",
             color_model: ColorModel::RGBA8888,
             major_version: 1,
             minor_version: 0,
-            explanation: c"Filter plugin used for the testing of frei0r-rs",
+            explanation: Some(c"Filter plugin used for the testing of frei0r-rs2"),
         }
     }
 
