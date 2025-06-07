@@ -1,9 +1,12 @@
 use frei0r_rs::*;
 
+struct Extra;
+
 #[derive(PluginBase)]
 pub struct TestPlugin {
     #[frei0r(explain = c"Shift in x direction")] xshift : f64,
     #[frei0r(explain = c"Shift in y direction")] yshift : f64,
+    #[frei0r(skip)] extra: Extra,
 }
 
 impl Plugin for TestPlugin {
@@ -21,8 +24,9 @@ impl Plugin for TestPlugin {
 
     fn new(_width : usize, _height : usize) -> Self {
         Self {
-            xshift : 0.0,
-            yshift : 0.0,
+            xshift: 0.0,
+            yshift: 0.0,
+            extra: Extra,
         }
     }
 
@@ -36,6 +40,8 @@ impl Plugin for TestPlugin {
                 outframe[dy * width + dx] = inframe[sy * width + sx];
             }
         }
+        // Do something with internal field
+        let _extra = &self.extra;
     }
 
     fn update2(&self, _ : f64, _width : usize, _height : usize, _inframe1 : &[u32], _inframe2 : &[u32], _inframe3 : &[u32], _outframe : &mut [u32]) {
@@ -44,4 +50,3 @@ impl Plugin for TestPlugin {
 }
 
 plugin!(TestPlugin);
-
