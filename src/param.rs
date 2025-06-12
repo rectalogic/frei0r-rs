@@ -82,15 +82,15 @@ impl<T> ParamInfo<T> {
     param_info_new!(position, &Position, &Position);
     param_info_new!(string, &CStr, &CStr);
 
-    pub fn name(&self) -> &'static CStr {
+    pub(crate) fn name(&self) -> &'static CStr {
         self.name
     }
 
-    pub fn explanation(&self) -> &'static CStr {
+    pub(crate) fn explanation(&self) -> &'static CStr {
         self.explanation
     }
 
-    pub fn kind(&self) -> &ParamKind<T> {
+    pub(crate) fn kind(&self) -> &ParamKind<T> {
         &self.kind
     }
 }

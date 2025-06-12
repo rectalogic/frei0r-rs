@@ -137,54 +137,64 @@ pub trait Mixer3Plugin: Plugin<Kind = KindMixer3> {
 #[macro_export]
 macro_rules! plugin {
     ($type:ty) => {
-        use frei0r_rs2::ffi;
+        use $crate::ffi;
 
         #[unsafe(no_mangle)]
-        pub extern "C" fn f0r_init() -> ffi::c_int {
-            ffi::f0r_init()
+        pub extern "C" fn f0r_init() -> std::ffi::c_int {
+            1
         }
+
         #[unsafe(no_mangle)]
-        pub extern "C" fn f0r_deinit() {
-            ffi::f0r_deinit()
-        }
+        pub extern "C" fn f0r_deinit() {}
+
         #[unsafe(no_mangle)]
         pub unsafe extern "C" fn f0r_get_plugin_info(info: *mut ffi::f0r_plugin_info_t) {
-            unsafe { ffi::f0r_get_plugin_info::<$type>(info) }
+            unsafe { ffi::Instance::<$type>::f0r_get_plugin_info(info) };
         }
+
         #[unsafe(no_mangle)]
         pub unsafe extern "C" fn f0r_get_param_info(
             info: *mut ffi::f0r_param_info_t,
-            param_index: ffi::c_int,
+            param_index: std::ffi::c_int,
         ) {
-            unsafe { ffi::f0r_get_param_info::<$type>(info, param_index) }
+            unsafe { ffi::Instance::<$type>::f0r_get_param_info(info, param_index) };
         }
+
         #[unsafe(no_mangle)]
         pub extern "C" fn f0r_construct(
-            width: ffi::c_uint,
-            height: ffi::c_uint,
+            width: std::ffi::c_uint,
+            height: std::ffi::c_uint,
         ) -> ffi::f0r_instance_t {
-            ffi::f0r_construct::<$type>(width, height)
+            Box::into_raw(Box::new(ffi::Instance::<$type>::new(width, height)))
+                as ffi::f0r_instance_t
         }
+
         #[unsafe(no_mangle)]
         pub extern "C" fn f0r_destruct(instance: ffi::f0r_instance_t) {
-            ffi::f0r_destruct::<$type>(instance)
+            let instance = unsafe { Box::from_raw(instance as *mut ffi::Instance<$type>) };
+            drop(instance)
         }
+
         #[unsafe(no_mangle)]
         pub extern "C" fn f0r_set_param_value(
             instance: ffi::f0r_instance_t,
             param: ffi::f0r_param_t,
-            param_index: ffi::c_int,
+            param_index: std::ffi::c_int,
         ) {
-            ffi::f0r_set_param_value::<$type>(instance, param, param_index)
+            let instance = unsafe { &mut *(instance as *mut ffi::Instance<$type>) };
+            instance.f0r_set_param_value(param, param_index);
         }
+
         #[unsafe(no_mangle)]
         pub extern "C" fn f0r_get_param_value(
             instance: ffi::f0r_instance_t,
             param: ffi::f0r_param_t,
-            param_index: ffi::c_int,
+            param_index: std::ffi::c_int,
         ) {
-            ffi::f0r_get_param_value::<$type>(instance, param, param_index)
+            let instance = unsafe { &mut *(instance as *mut ffi::Instance<$type>) };
+            instance.f0r_get_param_value(param, param_index);
         }
+
         #[unsafe(no_mangle)]
         pub unsafe extern "C" fn f0r_update(
             instance: ffi::f0r_instance_t,
@@ -192,17 +202,12 @@ macro_rules! plugin {
             inframe: *const u32,
             outframe: *mut u32,
         ) {
+            let instance = unsafe { &mut *(instance as *mut ffi::Instance<$type>) };
             unsafe {
-                ffi::f0r_update2::<$type>(
-                    instance,
-                    time,
-                    inframe,
-                    std::ptr::null(),
-                    std::ptr::null(),
-                    outframe,
-                )
-            }
+                instance.f0r_update2(time, inframe, std::ptr::null(), std::ptr::null(), outframe)
+            };
         }
+
         #[unsafe(no_mangle)]
         pub unsafe extern "C" fn f0r_update2(
             instance: ffi::f0r_instance_t,
@@ -212,9 +217,8 @@ macro_rules! plugin {
             inframe3: *const u32,
             outframe: *mut u32,
         ) {
-            unsafe {
-                ffi::f0r_update2::<$type>(instance, time, inframe1, inframe2, inframe3, outframe)
-            }
+            let instance = unsafe { &mut *(instance as *mut ffi::Instance<$type>) };
+            unsafe { instance.f0r_update2(time, inframe1, inframe2, inframe3, outframe) };
         }
     };
 }
