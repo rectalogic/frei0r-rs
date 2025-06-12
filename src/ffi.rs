@@ -310,59 +310,25 @@ fn frame_to_slice(frame: &*const u32, length: usize) -> &[u32] {
     }
 }
 
-pub trait PluginUpdate {
-    fn update(
-        &mut self,
-        frame_length: usize,
-        time: f64,
-        inframe1: *const u32,
-        inframe2: *const u32,
-        inframe3: *const u32,
-        outframe: &mut [u32],
-    );
-}
-
-impl<T> PluginUpdate for T
-where
-    T: Plugin,
-    T: PluginKindUpdate<T::Kind>,
-{
-    fn update(
-        &mut self,
-        frame_length: usize,
-        time: f64,
-        inframe1: *const u32,
-        inframe2: *const u32,
-        inframe3: *const u32,
-        outframe: &mut [u32],
-    ) {
-        <T as PluginKindUpdate<T::Kind>>::update(
-            self,
-            frame_length,
-            time,
-            inframe1,
-            inframe2,
-            inframe3,
-            outframe,
-        );
-    }
-}
-
 #[doc(hidden)]
-pub unsafe fn f0r_update2<P: Plugin + PluginUpdate>(
+pub unsafe fn f0r_update2<P>(
     instance: f0r_instance_t,
     time: f64,
     inframe1: *const u32,
     inframe2: *const u32,
     inframe3: *const u32,
     outframe: *mut u32,
-) {
+) where
+    P: Plugin,
+    P: PluginKindUpdate<P::Kind>,
+{
     let instance = unsafe { &mut *(instance as *mut Instance<P>) };
     if outframe.is_null() {
         panic!("unexpected null output frame");
     }
     let outframe = unsafe { std::slice::from_raw_parts_mut(outframe, instance.frame_length) };
-    instance.inner.update(
+    <P as PluginKindUpdate<P::Kind>>::update(
+        &mut instance.inner,
         instance.frame_length,
         time,
         inframe1,
