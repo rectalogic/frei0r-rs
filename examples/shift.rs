@@ -10,14 +10,14 @@ pub struct ShiftPlugin {
 impl Plugin for ShiftPlugin {
     type Kind = KindFilter;
 
-    const PARAMS: &'static [ParamInfo<Self>] = &[
-        ParamInfo::new_double(
+    const PARAMS: &'static [param::ParamInfo<Self>] = &[
+        param::ParamInfo::new_double(
             c"xshift",
             c"Shift in x direction",
             |plugin| plugin.xshift,
             |plugin, value| plugin.xshift = value,
         ),
-        ParamInfo::new_double(
+        param::ParamInfo::new_double(
             c"yshift",
             c"Shift in y direction",
             |plugin| plugin.yshift,
