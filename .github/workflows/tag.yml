@@ -1,0 +1,19 @@
+name: Tag
+
+on:
+  push:
+    tags:
+      - "**"
+
+jobs:
+  tag:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Rustup
+        run: |
+          rustup update stable
+      - name: Verify tag version
+        run: |
+          CARGO_VERSION=$(cargo metadata --format-version 1 --no-deps | jq --raw-output  '.packages | map(select(.name == "'frei0r-rs2'")) | .[0].version')
+          [ "${CARGO_VERSION}" == "${GITHUB_REF_NAME}" ]
