@@ -4,9 +4,9 @@
 
 #[doc(hidden)]
 pub mod ffi;
-pub mod param;
+mod param;
 pub use ffi::{KindFilter, KindMixer2, KindMixer3, KindSource, PluginKind};
-use param::ParamInfo;
+pub use param::{Color, ParamInfo, ParamKind, Position};
 use std::ffi::CStr;
 
 /// The plugin base trait. Plugins must also implement one of the

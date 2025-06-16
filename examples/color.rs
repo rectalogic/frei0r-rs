@@ -1,7 +1,7 @@
 use frei0r_rs2::*;
 
 pub struct ColorPlugin {
-    color: param::Color,
+    color: Color,
     width: usize,
     height: usize,
 }
@@ -9,7 +9,7 @@ pub struct ColorPlugin {
 impl Plugin for ColorPlugin {
     type Kind = KindSource;
 
-    const PARAMS: &'static [param::ParamInfo<Self>] = &[param::ParamInfo::new_color(
+    const PARAMS: &'static [ParamInfo<Self>] = &[ParamInfo::new_color(
         c"color",
         c"Color to generate",
         |plugin| &plugin.color,
@@ -29,7 +29,7 @@ impl Plugin for ColorPlugin {
 
     fn new(width: usize, height: usize) -> Self {
         Self {
-            color: param::Color {
+            color: Color {
                 r: 1.0,
                 g: 1.0,
                 b: 1.0,
