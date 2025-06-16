@@ -12,7 +12,7 @@ impl Plugin for ColorPlugin {
     const PARAMS: &'static [ParamInfo<Self>] = &[ParamInfo::new_color(
         c"color",
         c"Color to generate",
-        |plugin| &plugin.color,
+        |plugin| plugin.color,
         |plugin, value| plugin.color = *value,
     )];
 

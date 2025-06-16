@@ -34,11 +34,11 @@ pub enum ParamKind<T> {
         set: fn(&mut T, f64),
     },
     Color {
-        get: fn(&T) -> &Color,
+        get: fn(&T) -> Color,
         set: fn(&mut T, &Color),
     },
     Position {
-        get: fn(&T) -> &Position,
+        get: fn(&T) -> Position,
         set: fn(&mut T, &Position),
     },
     String {
@@ -78,8 +78,8 @@ pub struct ParamInfo<T> {
 impl<T> ParamInfo<T> {
     param_info_new!(bool, bool, bool);
     param_info_new!(double, f64, f64);
-    param_info_new!(color, &Color, &Color);
-    param_info_new!(position, &Position, &Position);
+    param_info_new!(color, Color, &Color);
+    param_info_new!(position, Position, &Position);
     param_info_new!(string, &CStr, &CStr);
 
     pub(crate) fn name(&self) -> &'static CStr {
