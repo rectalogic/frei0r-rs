@@ -7,7 +7,12 @@ pub mod ffi;
 mod param;
 pub use ffi::{KindFilter, KindMixer2, KindMixer3, KindSource, PluginKind};
 pub use param::{Color, ParamInfo, ParamKind, Position};
-use std::ffi::CStr;
+use std::{
+    ffi::CStr,
+    sync::{LockResult, Mutex, MutexGuard},
+};
+
+use crate::ffi::{Instance, PluginKindUpdate};
 
 /// The plugin base trait. Plugins must also implement one of the
 /// [SourcePlugin], [FilterPlugin], [Mixer2Plugin] or [Mixer3Plugin] traits
@@ -18,7 +23,7 @@ use std::ffi::CStr;
 ///
 /// The function is responsible to restore the fpu state (e.g. rounding mode) and mmx state if
 /// applicable before it returns to the caller.
-pub trait Plugin: 'static + Sized {
+pub trait Plugin: 'static + Sized + Send {
     type Kind: PluginKind;
 
     /// The list of plugin parameters
@@ -133,11 +138,28 @@ pub enum ColorModel {
     PACKED32,
 }
 
+#[doc(hidden)]
+pub struct InstanceHolder<P: Plugin + PluginKindUpdate<P::Kind>> {
+    instance: Mutex<Instance<P>>,
+}
+
+impl<P: Plugin + PluginKindUpdate<P::Kind>> InstanceHolder<P> {
+    pub fn new(instance: Instance<P>) -> Self {
+        InstanceHolder {
+            instance: Mutex::new(instance),
+        }
+    }
+
+    pub fn lock(&self) -> LockResult<MutexGuard<'_, Instance<P>>> {
+        self.instance.lock()
+    }
+}
+
 /// Export necessary C bindings for frei0r plugin.
 #[macro_export]
 macro_rules! plugin {
     ($type:ty) => {
-        use $crate::ffi;
+        use $crate::{InstanceHolder, ffi};
 
         #[unsafe(no_mangle)]
         pub extern "C" fn f0r_init() -> std::ffi::c_int {
@@ -165,14 +187,14 @@ macro_rules! plugin {
             width: std::ffi::c_uint,
             height: std::ffi::c_uint,
         ) -> ffi::f0r_instance_t {
-            Box::into_raw(Box::new(ffi::Instance::<$type>::new(width, height)))
-                as ffi::f0r_instance_t
+            let holder = InstanceHolder::new(ffi::Instance::<$type>::new(width, height));
+            Box::into_raw(Box::new(holder)) as ffi::f0r_instance_t
         }
 
         #[unsafe(no_mangle)]
         pub extern "C" fn f0r_destruct(instance: ffi::f0r_instance_t) {
-            let instance = unsafe { Box::from_raw(instance as *mut ffi::Instance<$type>) };
-            drop(instance)
+            let holder = unsafe { Box::from_raw(instance as *mut InstanceHolder<$type>) };
+            drop(holder)
         }
 
         #[unsafe(no_mangle)]
@@ -181,8 +203,10 @@ macro_rules! plugin {
             param: ffi::f0r_param_t,
             param_index: std::ffi::c_int,
         ) {
-            let instance = unsafe { &mut *(instance as *mut ffi::Instance<$type>) };
-            instance.f0r_set_param_value(param, param_index);
+            let holder = unsafe { &*(instance as *const InstanceHolder<$type>) };
+            if let Ok(mut instance) = holder.lock() {
+                instance.f0r_set_param_value(param, param_index);
+            }
         }
 
         #[unsafe(no_mangle)]
@@ -191,8 +215,10 @@ macro_rules! plugin {
             param: ffi::f0r_param_t,
             param_index: std::ffi::c_int,
         ) {
-            let instance = unsafe { &mut *(instance as *mut ffi::Instance<$type>) };
-            instance.f0r_get_param_value(param, param_index);
+            let holder = unsafe { &*(instance as *const InstanceHolder<$type>) };
+            if let Ok(mut instance) = holder.lock() {
+                instance.f0r_get_param_value(param, param_index);
+            }
         }
 
         #[unsafe(no_mangle)]
@@ -202,10 +228,18 @@ macro_rules! plugin {
             inframe: *const u32,
             outframe: *mut u32,
         ) {
-            let instance = unsafe { &mut *(instance as *mut ffi::Instance<$type>) };
-            unsafe {
-                instance.f0r_update2(time, inframe, std::ptr::null(), std::ptr::null(), outframe)
-            };
+            let holder = unsafe { &*(instance as *const InstanceHolder<$type>) };
+            if let Ok(mut instance) = holder.lock() {
+                unsafe {
+                    instance.f0r_update2(
+                        time,
+                        inframe,
+                        std::ptr::null(),
+                        std::ptr::null(),
+                        outframe,
+                    )
+                };
+            }
         }
 
         #[unsafe(no_mangle)]
@@ -217,8 +251,10 @@ macro_rules! plugin {
             inframe3: *const u32,
             outframe: *mut u32,
         ) {
-            let instance = unsafe { &mut *(instance as *mut ffi::Instance<$type>) };
-            unsafe { instance.f0r_update2(time, inframe1, inframe2, inframe3, outframe) };
+            let holder = unsafe { &*(instance as *const InstanceHolder<$type>) };
+            if let Ok(mut instance) = holder.lock() {
+                unsafe { instance.f0r_update2(time, inframe1, inframe2, inframe3, outframe) };
+            }
         }
     };
 }
