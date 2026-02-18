@@ -84,7 +84,7 @@ dependencies = [
 
 [[package]]
 name = "frei0r-rs2"
-version = "2.3.0"
+version = "2.3.1"
 dependencies = [
  "frei0r-sys",
  "paste",
