@@ -14,6 +14,16 @@ use std::{
 
 use crate::ffi::{Instance, PluginKindUpdate};
 
+/// Convert mutable u32 slice to mutable u8 slice
+pub fn slice_to_bytes_mut(slice: &mut [u32]) -> &mut [u8] {
+    unsafe { std::slice::from_raw_parts_mut(slice.as_mut_ptr().cast::<u8>(), size_of_val(slice)) }
+}
+
+/// Convert u32 slice to u8 slice
+pub fn slice_to_bytes(slice: &[u32]) -> &[u8] {
+    unsafe { std::slice::from_raw_parts(slice.as_ptr().cast::<u8>(), size_of_val(slice)) }
+}
+
 /// The plugin base trait. Plugins must also implement one of the
 /// [SourcePlugin], [FilterPlugin], [Mixer2Plugin] or [Mixer3Plugin] traits
 /// corresponding to the [PluginKind] associated type.
