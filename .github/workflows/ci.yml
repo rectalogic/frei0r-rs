@@ -29,7 +29,8 @@ jobs:
           if [ "$RUNNER_OS" == "Linux" ]; then
             sudo apt install ffmpeg
           elif [ "$RUNNER_OS" == "macOS" ]; then
-            brew install ffmpeg
+            brew install ffmpeg-full
+            echo "$(brew --prefix)/opt/ffmpeg-full/bin" >> $GITHUB_PATH
           elif [ "$RUNNER_OS" == "Windows" ]; then
             choco install ffmpeg-full
           else
