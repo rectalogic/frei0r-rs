@@ -1,0 +1,13 @@
+[package]
+name = "frei0r-sys2"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Sys crate for frei0r-rs2"
+
+[features]
+bindgen = ["dep:bindgen"]
+
+[build-dependencies]
+bindgen = { version = "0.72.1", optional = true }

@@ -1,6 +1,6 @@
 use crate::param::{Color, ParamInfo, ParamKind, Position};
 use crate::{ColorModel, FilterPlugin, Mixer2Plugin, Mixer3Plugin, Plugin, SourcePlugin};
-pub use frei0r_sys::*;
+pub use frei0r_sys2::*;
 use std::ffi::{CStr, c_int, c_uint};
 
 mod private {

@@ -21,7 +21,7 @@ jobs:
       - name: Lint
         run: |
           cargo fmt --all -- --check
-          cargo clippy -- -D warnings
+          cargo clippy --workspace -- -D warnings
       - name: Build
         run: cargo build --examples --verbose
       - name: Install

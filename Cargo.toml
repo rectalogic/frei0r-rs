@@ -1,10 +1,22 @@
-[package]
-name = "frei0r-rs2"
-version = "2.3.1"
+[workspace]
+members = ["frei0r-sys"]
+
+[workspace.package]
+version = "2.4.0"
 edition = "2024"
 license = "MIT"
 repository = "https://github.com/rectalogic/frei0r-rs"
+
+[package]
+name = "frei0r-rs2"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
 description = "Rust bindings to the frei0r plugin API, fork of frei0r-rs"
+
+[features]
+bindgen = ["frei0r-sys2/bindgen"]
 
 [[example]]
 name = "shift"
@@ -15,5 +27,5 @@ name = "color"
 crate-type = ["cdylib"]
 
 [dependencies]
-frei0r-sys = "0.1"
+frei0r-sys2 = { version = "2.4", path = "frei0r-sys" }
 paste = "1.0"
