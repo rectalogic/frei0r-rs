@@ -1,65 +1,25 @@
-use crate::param::{Color, ParamInfo, ParamKind, Position};
-use crate::{ColorModel, FilterPlugin, Mixer2Plugin, Mixer3Plugin, Plugin, SourcePlugin};
+use crate::{
+    ColorModel, Plugin,
+    param::{Color, ParamInfo, ParamKind, Position},
+};
 pub use frei0r_sys2::*;
 use std::ffi::{CStr, c_int, c_uint};
 
 mod private {
-    pub trait Sealed {}
+    pub trait Sealed<const S: usize> {}
+
+    impl<T> Sealed<0> for T where T: crate::Plugin<0> {}
+    impl<T> Sealed<1> for T where T: crate::Plugin<1> {}
+    impl<T> Sealed<2> for T where T: crate::Plugin<2> {}
+    impl<T> Sealed<3> for T where T: crate::Plugin<3> {}
 }
 
-/// Marker trait to determine type of plugin.
-/// See [KindSource], [KindFilter], [KindMixer2], [KindMixer3]
-pub trait PluginKind: private::Sealed {
-    #[doc(hidden)]
-    const PLUGIN_TYPE: i32;
-}
+pub trait PluginKind<const S: usize>: Plugin<S> + private::Sealed<S> {
+    const SIZE: usize;
 
-/// Marker type representing a Source plugin.
-#[derive(Debug, Clone, Copy)]
-pub struct KindSource;
-impl private::Sealed for KindSource {}
-impl PluginKind for KindSource {
-    #[doc(hidden)]
-    const PLUGIN_TYPE: i32 = F0R_PLUGIN_TYPE_SOURCE as i32;
-}
+    fn plugin_type() -> i32;
 
-/// Marker type representing a Filter plugin.
-#[derive(Debug, Clone, Copy)]
-pub struct KindFilter;
-impl private::Sealed for KindFilter {}
-impl PluginKind for KindFilter {
-    #[doc(hidden)]
-    const PLUGIN_TYPE: i32 = F0R_PLUGIN_TYPE_FILTER as i32;
-}
-
-/// Marker type representing a Mixer2 plugin.
-#[derive(Debug, Clone, Copy)]
-pub struct KindMixer2;
-impl private::Sealed for KindMixer2 {}
-impl PluginKind for KindMixer2 {
-    #[doc(hidden)]
-    const PLUGIN_TYPE: i32 = F0R_PLUGIN_TYPE_MIXER2 as i32;
-}
-
-/// Marker type representing a Mixer3 plugin.
-#[derive(Debug, Clone, Copy)]
-pub struct KindMixer3;
-impl private::Sealed for KindMixer3 {}
-impl PluginKind for KindMixer3 {
-    #[doc(hidden)]
-    const PLUGIN_TYPE: i32 = F0R_PLUGIN_TYPE_MIXER3 as i32;
-}
-
-// Bridges between type-level plugin kinds and runtime update behavior.
-//
-// This trait is parameterized by PluginKind `K` to avoid implementation conflicts
-// while providing a uniform `update` signature for the FFI layer. Each plugin type
-// (Source, Filter, Mixer2, Mixer3) has different update method signatures,
-// this trait dispatches to the appropriate plugin-specific method based on
-// the PluginKind type parameter `K`.
-#[doc(hidden)]
-pub trait PluginKindUpdate<K: PluginKind> {
-    fn update(
+    fn update_raw(
         &mut self,
         frame_length: usize,
         time: f64,
@@ -70,11 +30,17 @@ pub trait PluginKindUpdate<K: PluginKind> {
     );
 }
 
-impl<T> PluginKindUpdate<KindSource> for T
+impl<T> PluginKind<0> for T
 where
-    T: SourcePlugin,
+    T: Plugin<0>,
 {
-    fn update(
+    const SIZE: usize = 0;
+
+    fn plugin_type() -> i32 {
+        F0R_PLUGIN_TYPE_SOURCE as i32
+    }
+
+    fn update_raw(
         &mut self,
         _frame_length: usize,
         time: f64,
@@ -83,15 +49,21 @@ where
         _inframe3: *const u32,
         outframe: &mut [u32],
     ) {
-        self.update_source(time, outframe);
+        self.update(time, [], outframe);
     }
 }
 
-impl<T> PluginKindUpdate<KindFilter> for T
+impl<T> PluginKind<1> for T
 where
-    T: FilterPlugin,
+    T: Plugin<1>,
 {
-    fn update(
+    const SIZE: usize = 1;
+
+    fn plugin_type() -> i32 {
+        F0R_PLUGIN_TYPE_FILTER as i32
+    }
+
+    fn update_raw(
         &mut self,
         frame_length: usize,
         time: f64,
@@ -100,15 +72,22 @@ where
         _inframe3: *const u32,
         outframe: &mut [u32],
     ) {
-        self.update_filter(time, frame_to_slice(&inframe1, frame_length), outframe);
+        assert!(!inframe1.is_null());
+        self.update(time, [frame_to_slice(&inframe1, frame_length)], outframe);
     }
 }
 
-impl<T> PluginKindUpdate<KindMixer2> for T
+impl<T> PluginKind<2> for T
 where
-    T: Mixer2Plugin,
+    T: Plugin<2>,
 {
-    fn update(
+    const SIZE: usize = 2;
+
+    fn plugin_type() -> i32 {
+        F0R_PLUGIN_TYPE_MIXER2 as i32
+    }
+
+    fn update_raw(
         &mut self,
         frame_length: usize,
         time: f64,
@@ -117,20 +96,30 @@ where
         _inframe3: *const u32,
         outframe: &mut [u32],
     ) {
-        self.update_mixer2(
+        assert!(!inframe1.is_null());
+        assert!(!inframe2.is_null());
+        self.update(
             time,
-            frame_to_slice(&inframe1, frame_length),
-            frame_to_slice(&inframe2, frame_length),
+            [
+                frame_to_slice(&inframe1, frame_length),
+                frame_to_slice(&inframe2, frame_length),
+            ],
             outframe,
         );
     }
 }
 
-impl<T> PluginKindUpdate<KindMixer3> for T
+impl<T> PluginKind<3> for T
 where
-    T: Mixer3Plugin,
+    T: Plugin<3>,
 {
-    fn update(
+    const SIZE: usize = 3;
+
+    fn plugin_type() -> i32 {
+        F0R_PLUGIN_TYPE_MIXER2 as i32
+    }
+
+    fn update_raw(
         &mut self,
         frame_length: usize,
         time: f64,
@@ -139,33 +128,42 @@ where
         inframe3: *const u32,
         outframe: &mut [u32],
     ) {
-        self.update_mixer3(
+        assert!(!inframe1.is_null());
+        assert!(!inframe2.is_null());
+        assert!(!inframe3.is_null());
+        self.update(
             time,
-            frame_to_slice(&inframe1, frame_length),
-            frame_to_slice(&inframe2, frame_length),
-            frame_to_slice(&inframe3, frame_length),
+            [
+                frame_to_slice(&inframe1, frame_length),
+                frame_to_slice(&inframe2, frame_length),
+                frame_to_slice(&inframe3, frame_length),
+            ],
             outframe,
         );
     }
 }
 
-#[doc(hidden)]
-pub struct Instance<P: Plugin + PluginKindUpdate<P::Kind>> {
+pub struct Instance<P, const S: usize>
+where
+    P: Plugin<S> + PluginKind<S>,
+{
     frame_length: usize,
     inner: P,
 }
 
-impl<P> Instance<P>
+impl<P, const S: usize> Instance<P, S>
 where
-    P: Plugin + PluginKindUpdate<P::Kind>,
+    P: Plugin<S> + PluginKind<S>,
 {
+    /// # Safety
+    /// frei0r contract
     pub unsafe fn f0r_get_plugin_info(info: *mut f0r_plugin_info_t) {
         let info = unsafe { &mut *info };
         let our_info = P::info();
 
         info.name = our_info.name.as_ptr();
         info.author = our_info.author.as_ptr();
-        info.plugin_type = P::Kind::PLUGIN_TYPE;
+        info.plugin_type = P::plugin_type();
         info.color_model = match our_info.color_model {
             ColorModel::BGRA8888 => F0R_COLOR_MODEL_BGRA8888 as i32,
             ColorModel::RGBA8888 => F0R_COLOR_MODEL_RGBA8888 as i32,
@@ -180,6 +178,8 @@ where
         }
     }
 
+    /// # Safety
+    /// frei0r contract
     pub unsafe fn f0r_get_param_info(info: *mut f0r_param_info_t, param_index: c_int) {
         let param_index = param_index as usize;
 
@@ -282,6 +282,8 @@ where
         };
     }
 
+    /// # Safety
+    /// frei0r contract
     pub unsafe fn f0r_update2(
         &mut self,
         time: f64,
@@ -290,12 +292,9 @@ where
         inframe3: *const u32,
         outframe: *mut u32,
     ) {
-        if outframe.is_null() {
-            panic!("unexpected null output frame");
-        }
+        assert!(!outframe.is_null());
         let outframe = unsafe { std::slice::from_raw_parts_mut(outframe, self.frame_length) };
-        <P as PluginKindUpdate<P::Kind>>::update(
-            &mut self.inner,
+        self.inner.update_raw(
             self.frame_length,
             time,
             inframe1,

@@ -7,9 +7,7 @@ pub struct ShiftPlugin {
     height: usize,
 }
 
-impl Plugin for ShiftPlugin {
-    type Kind = KindFilter;
-
+impl Plugin<1> for ShiftPlugin {
     const PARAMS: &'static [ParamInfo<Self>] = &[
         ParamInfo::new_double(
             c"xshift",
@@ -44,17 +42,15 @@ impl Plugin for ShiftPlugin {
             height,
         }
     }
-}
 
-impl FilterPlugin for ShiftPlugin {
-    fn update_filter(&mut self, _time: f64, inframe: &[u32], outframe: &mut [u32]) {
+    fn update(&mut self, _time: f64, inframes: [&[u32]; 1], outframe: &mut [u32]) {
         let xshift = (self.xshift * self.width as f64) as usize;
         let yshift = (self.yshift * self.height as f64) as usize;
         for dy in 0..self.height {
             for dx in 0..self.width {
                 let sy = (dy + yshift) % self.height;
                 let sx = (dx + xshift) % self.width;
-                outframe[dy * self.width + dx] = inframe[sy * self.width + sx];
+                outframe[dy * self.width + dx] = inframes[0][sy * self.width + sx];
             }
         }
     }

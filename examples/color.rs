@@ -6,9 +6,7 @@ pub struct ColorPlugin {
     height: usize,
 }
 
-impl Plugin for ColorPlugin {
-    type Kind = KindSource;
-
+impl Plugin<0> for ColorPlugin {
     const PARAMS: &'static [ParamInfo<Self>] = &[ParamInfo::new_color(
         c"color",
         c"Color to generate",
@@ -38,10 +36,8 @@ impl Plugin for ColorPlugin {
             height,
         }
     }
-}
 
-impl SourcePlugin for ColorPlugin {
-    fn update_source(&mut self, _time: f64, outframe: &mut [u32]) {
+    fn update(&mut self, _time: f64, _inframes: [&[u32]; 0], outframe: &mut [u32]) {
         let r_u8 = (self.color.r * 255.0) as u8;
         let g_u8 = (self.color.g * 255.0) as u8;
         let b_u8 = (self.color.b * 255.0) as u8;

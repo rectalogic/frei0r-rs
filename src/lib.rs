@@ -2,17 +2,17 @@
 //!
 //! See examples for API usage.
 
-#[doc(hidden)]
-pub mod ffi;
+mod ffi;
 mod param;
-pub use ffi::{KindFilter, KindMixer2, KindMixer3, KindSource, PluginKind};
+#[doc(hidden)]
+pub use ffi::{
+    Instance, PluginKind, f0r_instance_t, f0r_param_info_t, f0r_param_t, f0r_plugin_info_t,
+};
 pub use param::{Color, ParamInfo, ParamKind, Position};
 use std::{
     ffi::CStr,
     sync::{LockResult, Mutex, MutexGuard},
 };
-
-use crate::ffi::{Instance, PluginKindUpdate};
 
 /// Convert mutable u32 slice to mutable u8 slice
 pub fn slice_to_bytes_mut(slice: &mut [u32]) -> &mut [u8] {
@@ -33,9 +33,7 @@ pub fn slice_to_bytes(slice: &[u32]) -> &[u8] {
 ///
 /// The function is responsible to restore the fpu state (e.g. rounding mode) and mmx state if
 /// applicable before it returns to the caller.
-pub trait Plugin: 'static + Sized + Send {
-    type Kind: PluginKind;
-
+pub trait Plugin<const S: usize>: 'static + Sized + Send {
     /// The list of plugin parameters
     const PARAMS: &'static [ParamInfo<Self>];
 
@@ -49,39 +47,9 @@ pub trait Plugin: 'static + Sized + Send {
     ///
     /// The plugin must set default values for all parameters in this function.
     fn new(width: usize, height: usize) -> Self;
-}
 
-/// A source plugin, must be implemented if Plugin::Kind = KindSource
-pub trait SourcePlugin: Plugin<Kind = KindSource> {
-    fn update_source(&mut self, time: f64, outframe: &mut [u32]);
-}
-
-/// A filter plugin, must be implemented if Plugin::Kind = KindFilter
-pub trait FilterPlugin: Plugin<Kind = KindFilter> {
-    fn update_filter(&mut self, time: f64, inframe: &[u32], outframe: &mut [u32]);
-}
-
-/// A mixer2 plugin, must be implemented if Plugin::Kind = KindMixer2
-pub trait Mixer2Plugin: Plugin<Kind = KindMixer2> {
-    fn update_mixer2(
-        &mut self,
-        time: f64,
-        inframe1: &[u32],
-        inframe2: &[u32],
-        outframe: &mut [u32],
-    );
-}
-
-/// A mixer3 plugin, must be implemented if Plugin::Kind = KindMixer3
-pub trait Mixer3Plugin: Plugin<Kind = KindMixer3> {
-    fn update_mixer3(
-        &mut self,
-        time: f64,
-        inframe1: &[u32],
-        inframe2: &[u32],
-        inframe3: &[u32],
-        outframe: &mut [u32],
-    );
+    /// Render `outframe` using `inframes`
+    fn update(&mut self, time: f64, inframes: [&[u32]; S], outframe: &mut [u32]);
 }
 
 /// The type returned by the plugin to tell the application about its name, type, number of
@@ -149,18 +117,24 @@ pub enum ColorModel {
 }
 
 #[doc(hidden)]
-pub struct InstanceHolder<P: Plugin + PluginKindUpdate<P::Kind>> {
-    instance: Mutex<Instance<P>>,
+pub struct InstanceHolder<P, const S: usize>
+where
+    P: Plugin<S> + PluginKind<S>,
+{
+    instance: Mutex<Instance<P, S>>,
 }
 
-impl<P: Plugin + PluginKindUpdate<P::Kind>> InstanceHolder<P> {
-    pub fn new(instance: Instance<P>) -> Self {
+impl<P, const S: usize> InstanceHolder<P, S>
+where
+    P: Plugin<S> + PluginKind<S>,
+{
+    pub fn new(instance: Instance<P, S>) -> Self {
         InstanceHolder {
             instance: Mutex::new(instance),
         }
     }
 
-    pub fn lock(&self) -> LockResult<MutexGuard<'_, Instance<P>>> {
+    pub fn lock(&self) -> LockResult<MutexGuard<'_, Instance<P, S>>> {
         self.instance.lock()
     }
 }
@@ -169,7 +143,10 @@ impl<P: Plugin + PluginKindUpdate<P::Kind>> InstanceHolder<P> {
 #[macro_export]
 macro_rules! plugin {
     ($type:ty) => {
-        use $crate::{InstanceHolder, ffi};
+        use $crate::{
+            Instance, InstanceHolder, PluginKind, f0r_instance_t, f0r_param_info_t, f0r_param_t,
+            f0r_plugin_info_t,
+        };
 
         #[unsafe(no_mangle)]
         pub extern "C" fn f0r_init() -> std::ffi::c_int {
@@ -180,40 +157,55 @@ macro_rules! plugin {
         pub extern "C" fn f0r_deinit() {}
 
         #[unsafe(no_mangle)]
-        pub unsafe extern "C" fn f0r_get_plugin_info(info: *mut ffi::f0r_plugin_info_t) {
-            unsafe { ffi::Instance::<$type>::f0r_get_plugin_info(info) };
+        pub unsafe extern "C" fn f0r_get_plugin_info(info: *mut f0r_plugin_info_t) {
+            unsafe {
+                Instance::<$type, { <$type as PluginKind<_>>::SIZE }>::f0r_get_plugin_info(info)
+            };
         }
 
         #[unsafe(no_mangle)]
         pub unsafe extern "C" fn f0r_get_param_info(
-            info: *mut ffi::f0r_param_info_t,
+            info: *mut f0r_param_info_t,
             param_index: std::ffi::c_int,
         ) {
-            unsafe { ffi::Instance::<$type>::f0r_get_param_info(info, param_index) };
+            unsafe {
+                Instance::<$type, { <$type as PluginKind<_>>::SIZE }>::f0r_get_param_info(
+                    info,
+                    param_index,
+                )
+            };
         }
 
         #[unsafe(no_mangle)]
         pub extern "C" fn f0r_construct(
             width: std::ffi::c_uint,
             height: std::ffi::c_uint,
-        ) -> ffi::f0r_instance_t {
-            let holder = InstanceHolder::new(ffi::Instance::<$type>::new(width, height));
-            Box::into_raw(Box::new(holder)) as ffi::f0r_instance_t
+        ) -> f0r_instance_t {
+            let holder = InstanceHolder::new(
+                Instance::<$type, { <$type as PluginKind<_>>::SIZE }>::new(width, height),
+            );
+            Box::into_raw(Box::new(holder)) as f0r_instance_t
         }
 
         #[unsafe(no_mangle)]
-        pub extern "C" fn f0r_destruct(instance: ffi::f0r_instance_t) {
-            let holder = unsafe { Box::from_raw(instance as *mut InstanceHolder<$type>) };
+        pub extern "C" fn f0r_destruct(instance: f0r_instance_t) {
+            let holder = unsafe {
+                Box::from_raw(
+                    instance as *mut InstanceHolder<$type, { <$type as PluginKind<_>>::SIZE }>,
+                )
+            };
             drop(holder)
         }
 
         #[unsafe(no_mangle)]
         pub extern "C" fn f0r_set_param_value(
-            instance: ffi::f0r_instance_t,
-            param: ffi::f0r_param_t,
+            instance: f0r_instance_t,
+            param: f0r_param_t,
             param_index: std::ffi::c_int,
         ) {
-            let holder = unsafe { &*(instance as *const InstanceHolder<$type>) };
+            let holder = unsafe {
+                &*(instance as *const InstanceHolder<$type, { <$type as PluginKind<_>>::SIZE }>)
+            };
             if let Ok(mut instance) = holder.lock() {
                 instance.f0r_set_param_value(param, param_index);
             }
@@ -221,11 +213,13 @@ macro_rules! plugin {
 
         #[unsafe(no_mangle)]
         pub extern "C" fn f0r_get_param_value(
-            instance: ffi::f0r_instance_t,
-            param: ffi::f0r_param_t,
+            instance: f0r_instance_t,
+            param: f0r_param_t,
             param_index: std::ffi::c_int,
         ) {
-            let holder = unsafe { &*(instance as *const InstanceHolder<$type>) };
+            let holder = unsafe {
+                &*(instance as *const InstanceHolder<$type, { <$type as PluginKind<_>>::SIZE }>)
+            };
             if let Ok(mut instance) = holder.lock() {
                 instance.f0r_get_param_value(param, param_index);
             }
@@ -233,12 +227,14 @@ macro_rules! plugin {
 
         #[unsafe(no_mangle)]
         pub unsafe extern "C" fn f0r_update(
-            instance: ffi::f0r_instance_t,
+            instance: f0r_instance_t,
             time: f64,
             inframe: *const u32,
             outframe: *mut u32,
         ) {
-            let holder = unsafe { &*(instance as *const InstanceHolder<$type>) };
+            let holder = unsafe {
+                &*(instance as *const InstanceHolder<$type, { <$type as PluginKind<_>>::SIZE }>)
+            };
             if let Ok(mut instance) = holder.lock() {
                 unsafe {
                     instance.f0r_update2(
@@ -254,14 +250,16 @@ macro_rules! plugin {
 
         #[unsafe(no_mangle)]
         pub unsafe extern "C" fn f0r_update2(
-            instance: ffi::f0r_instance_t,
+            instance: f0r_instance_t,
             time: f64,
             inframe1: *const u32,
             inframe2: *const u32,
             inframe3: *const u32,
             outframe: *mut u32,
         ) {
-            let holder = unsafe { &*(instance as *const InstanceHolder<$type>) };
+            let holder = unsafe {
+                &*(instance as *const InstanceHolder<$type, { <$type as PluginKind<_>>::SIZE }>)
+            };
             if let Ok(mut instance) = holder.lock() {
                 unsafe { instance.f0r_update2(time, inframe1, inframe2, inframe3, outframe) };
             }

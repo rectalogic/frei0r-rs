@@ -2,7 +2,7 @@
 members = ["frei0r-sys"]
 
 [workspace.package]
-version = "2.4.0"
+version = "3.0.0"
 edition = "2024"
 license = "MIT"
 repository = "https://github.com/rectalogic/frei0r-rs"
@@ -27,5 +27,5 @@ name = "color"
 crate-type = ["cdylib"]
 
 [dependencies]
-frei0r-sys2 = { version = "2.4", path = "frei0r-sys" }
+frei0r-sys2 = { path = "frei0r-sys" }
 paste = "1.0"
