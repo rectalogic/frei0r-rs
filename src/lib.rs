@@ -24,11 +24,11 @@ pub fn slice_to_bytes(slice: &[u32]) -> &[u8] {
     unsafe { std::slice::from_raw_parts(slice.as_ptr().cast::<u8>(), size_of_val(slice)) }
 }
 
-/// The plugin base trait. Plugins must also implement one of the
-/// [SourcePlugin], [FilterPlugin], [Mixer2Plugin] or [Mixer3Plugin] traits
-/// corresponding to the [PluginKind] associated type.
+/// The core plugin trait.
+/// Implement `Plugin<0>` for source, `Plugin<1>` for filter,
+/// `Plugin<2>` for mixer2, or `Plugin<3>` for mixer3.
 ///
-/// The update functions are where the core effect processing happens. The application calls it after it has
+/// The update function is where the core effect processing happens. The application calls it after it has
 /// set the necessary parameter values.
 ///
 /// The function is responsible to restore the fpu state (e.g. rounding mode) and mmx state if
